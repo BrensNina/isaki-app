@@ -7,13 +7,19 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint",
+    "clean:opennext": "node scripts/clean-opennext.mjs",
+    "predeploy": "npm run clean:opennext",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "preupload": "npm run clean:opennext",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "prepreview": "npm run clean:opennext",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.19.9",
+    "firebase": "^12.15.0",
+    "lucide-react": "^1.21.0",
     "next": "16.2.6",
     "react": "^19.1.7",
     "react-dom": "^19.1.7"

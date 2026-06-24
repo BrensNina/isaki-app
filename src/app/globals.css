@@ -1,26 +1,42 @@
 @import "tailwindcss";
 
+/* Force a light, consistent theme. The previous prefers-color-scheme:dark made
+   native controls (e.g. <select> dropdowns) render unreadable. A business
+   dashboard reads better on a clean light surface anyway. */
 :root {
-	--background: #ffffff;
-	--foreground: #171717;
+	color-scheme: light;
 }
 
-@theme inline {
-	--color-background: var(--background);
-	--color-foreground: var(--foreground);
+@theme {
+	--color-background: #f5f6f8; /* app canvas */
+	--color-surface: #ffffff; /* cards, panels, inputs */
+	--color-border: #e6e8ec;
+	--color-foreground: #0f1729; /* primary text */
+	--color-muted: #64748b; /* secondary text */
+	--color-primary: #4f46e5; /* brand: indigo */
+	--color-primary-hover: #4338ca;
+	--color-primary-soft: #eef2ff; /* tinted surfaces */
+	--color-primary-foreground: #ffffff;
+
 	--font-sans: var(--font-geist-sans);
 	--font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--background: #0a0a0a;
-		--foreground: #ededed;
-	}
+body {
+	background: var(--color-background);
+	color: var(--color-foreground);
+	font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
 
-body {
-	background: var(--background);
-	color: var(--foreground);
-	font-family: Arial, Helvetica, sans-serif;
+/* Oculta las flechas (spinners) de los inputs numéricos. En campos angostos
+   (p. ej. "Cant." en una línea de pedido) los botones arriba/abajo tapaban el
+   valor. Se mantiene la entrada por teclado y la validación min/step. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+input[type="number"] {
+	-moz-appearance: textfield;
+	appearance: textfield;
 }

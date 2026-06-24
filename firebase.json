@@ -1,0 +1,21 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "auth": {
+    "authorizedDomains": [
+      "localhost",
+      "isaki-app.firebaseapp.com",
+      "isaki-app.web.app",
+      "isaki-app.ninabrens-sv.workers.dev"
+    ],
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "isaki-app",
+        "supportEmail": "ninabrensg@gmail.com"
+      }
+    }
+  }
+}

@@ -1,0 +1,109 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {uid}  (MUST equal the authenticated user's UID)
+// Fields:
+//   - uid: string (required, immutable, == auth.uid) - owner id
+//   - email: string|null (required) - PII, owner-read only
+//   - displayName: string|null (required, <= 100 chars)
+//   - photoURL: string|null (optional, <= 2000 chars)
+//   - bio: string (optional, <= 500 chars)
+//   - createdAt: timestamp (required, immutable after create)
+//   - updatedAt: timestamp (required)
+//
+// Access: a user may only read/write their OWN document. The document
+// contains PII (email), so it is NEVER readable by anyone else.
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------- Helper functions ----------------
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Rol del usuario autenticado, leído de su propio documento de perfil.
+    function rol() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol;
+    }
+
+    // Personal interno con acceso de gestión (administrador o vendedor).
+    function isStaff() {
+      return isAuthenticated() && rol() in ['admin', 'vendedor'];
+    }
+
+    // Personal que participa del flujo de un pedido (staff + producción).
+    function isOperativo() {
+      return isAuthenticated() && rol() in ['admin', 'vendedor', 'produccion'];
+    }
+
+    // String-or-null with a max length (null is allowed because Firebase
+    // Auth may not provide email/displayName/photoURL).
+    function isStringOrNull(value, maxLen) {
+      return value == null || (value is string && value.size() <= maxLen);
+    }
+
+    // Strict schema + type/size validation for a user profile document.
+    function isValidProfile(data, userId) {
+      return data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'rol', 'bio', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['uid', 'email', 'displayName', 'rol', 'bio', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid == userId
+        && isStringOrNull(data.email, 320)
+        && isStringOrNull(data.displayName, 100)
+        && isStringOrNull(data.photoURL, 2000)
+        && data.rol in ['admin', 'vendedor', 'produccion', 'cliente']
+        && data.bio is string && data.bio.size() <= 500
+        && data.updatedAt is timestamp;
+    }
+
+    // ---------------- users/{userId} ----------------
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+
+      allow create: if isOwner(userId)
+        && isValidProfile(request.resource.data, userId)
+        && request.resource.data.createdAt is timestamp;
+
+      allow update: if isOwner(userId)
+        && isValidProfile(request.resource.data, userId)
+        // Immutable fields cannot change on update. `rol` may be SET the first
+        // time (migration of pre-`rol` docs) but, once present, cannot change —
+        // so a user cannot self-promote (only backend/console may change roles).
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (!('rol' in resource.data) || request.resource.data.rol == resource.data.rol);
+
+      allow delete: if isOwner(userId);
+    }
+
+    // ---------------- clientes/{clienteId} ----------------
+    // Clientes mayoristas: gestionados por el personal interno (admin/vendedor).
+    // Prototipo revisado-pero-no-endurecido: la validación de esquema es ligera.
+    match /clientes/{clienteId} {
+      allow read, create, update, delete: if isStaff();
+    }
+
+    // ---------------- pedidos/{pedidoId} ----------------
+    // Lectura para todo el personal operativo (incluye producción); la creación
+    // y edición/borrado quedan para staff. Producción actualiza estados de flujo.
+    match /pedidos/{pedidoId} {
+      allow read: if isOperativo();
+      allow create, delete: if isStaff();
+      allow update: if isOperativo();
+    }
+
+    // Default deny everything else.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
