@@ -32,7 +32,7 @@ export async function obtenerCliente(id: string): Promise<Cliente | null> {
 	return snap.exists() ? ({ id: snap.id, ...snap.data() } as Cliente) : null;
 }
 
-/** Registra un nuevo cliente. Devuelve el id generado. */
+/** Registra un nuevo cliente. Devuelve el id generado. (Firebase first)*/
 export async function crearCliente(data: ClienteInput, vendedorUid: string): Promise<string> {
 	const ref = await addDoc(collection(getDb(), COL), {
 		...limpiar(data),
