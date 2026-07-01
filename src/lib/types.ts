@@ -130,3 +130,48 @@ export type PedidoInput = {
 	fechaEntregaPactada?: string;
 	notas?: string;
 };
+
+// ----------------------------- Cotizaciones ------------------------------
+
+export type EstadoCotizacion =
+	| "borrador"
+	| "enviada"
+	| "aprobada"
+	| "rechazada"
+	| "convertida";
+
+export const ESTADOS_COTIZACION: Record<EstadoCotizacion, EstadoMeta> = {
+	borrador: { label: "Borrador", orden: 0, badge: "bg-slate-100 text-slate-600" },
+	enviada: { label: "Enviada", orden: 1, badge: "bg-blue-50 text-blue-700" },
+	aprobada: { label: "Aprobada", orden: 2, badge: "bg-green-50 text-green-700" },
+	rechazada: { label: "Rechazada", orden: 3, badge: "bg-red-50 text-red-700" },
+	convertida: { label: "Convertida", orden: 4, badge: "bg-purple-50 text-purple-700" },
+};
+
+export interface Cotizacion {
+	id: string;
+	clienteId: string;
+	clienteNombre: string;
+	vendedorUid: string;
+	items: ItemPedido[]; // Reutilizamos el mismo tipo de las líneas de pedido
+	montoTotal: number;
+
+	fechaEmision: string; // ISO yyyy-mm-dd
+	fechaValidez: string; // ISO yyyy-mm-dd (Límite para que el cliente acepte)
+
+	estado: EstadoCotizacion;
+	notasCondiciones?: string; // Términos: "50% de adelanto, entrega local..."
+
+	pedidoGeneradoId?: string; // Si el estado es "convertida", guarda el ID del pedido hijo.
+
+	createdAt?: unknown;
+	updatedAt?: unknown;
+}
+
+export type CotizacionInput = {
+	clienteId: string;
+	clienteNombre: string;
+	items: ItemPedido[];
+	fechaValidez: string;
+	notasCondiciones?: string;
+};

@@ -5,6 +5,7 @@ import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import {
 	CheckCircle2,
 	Factory,
+	FileText,
 	LayoutDashboard,
 	LogOut,
 	Package,
@@ -20,10 +21,11 @@ import { listarPedidos } from "@/lib/pedidos";
 import { ROL_LABEL } from "@/lib/types";
 import type { Rol } from "@/lib/types";
 import ClientesView from "./clientes-view";
+import CotizacionesView from "./cotizaciones-view";
 import PedidosView from "./pedidos-view";
 import { Button, Card, Field, Input, Spinner, Textarea, money } from "./ui";
 
-type Vista = "inicio" | "clientes" | "pedidos" | "perfil";
+type Vista = "inicio" | "clientes" | "cotizaciones" | "pedidos" | "perfil";
 
 interface NavItem {
 	id: Vista;
@@ -35,6 +37,7 @@ interface NavItem {
 const NAV: NavItem[] = [
 	{ id: "inicio", label: "Panel principal", icon: LayoutDashboard, roles: ["admin", "vendedor", "produccion", "cliente"] },
 	{ id: "clientes", label: "Clientes", icon: Users, roles: ["admin", "vendedor"] },
+	{ id: "cotizaciones", label: "Cotizaciones", icon: FileText, roles: ["admin", "vendedor"] },
 	{ id: "pedidos", label: "Pedidos", icon: Package, roles: ["admin", "vendedor", "produccion"] },
 	{ id: "perfil", label: "Mi cuenta", icon: Settings, roles: ["admin", "vendedor", "produccion", "cliente"] },
 ];
@@ -111,6 +114,7 @@ export default function Dashboard() {
 				<div className="mx-auto max-w-5xl">
 					{vista === "inicio" && <Inicio rol={rol} />}
 					{vista === "clientes" && <ClientesView />}
+					{vista === "cotizaciones" && <CotizacionesView />}
 					{vista === "pedidos" && <PedidosView />}
 					{vista === "perfil" && <Perfil />}
 				</div>

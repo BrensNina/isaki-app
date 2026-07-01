@@ -101,6 +101,12 @@ service cloud.firestore {
       allow update: if isOperativo();
     }
 
+    // ---------------- cotizaciones/{cotizacionId} ----------------
+    // Cotizaciones: gestionadas por el personal interno (admin/vendedor).
+    match /cotizaciones/{cotizacionId} {
+      allow read, create, update, delete: if isStaff();
+    }
+
     // Default deny everything else.
     match /{document=**} {
       allow read, write: if false;
