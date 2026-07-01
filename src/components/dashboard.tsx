@@ -10,6 +10,7 @@ import {
 	LogOut,
 	Package,
 	Settings,
+	Shield,
 	Users,
 	Wallet,
 	type LucideIcon,
@@ -23,9 +24,10 @@ import type { Rol } from "@/lib/types";
 import ClientesView from "./clientes-view";
 import CotizacionesView from "./cotizaciones-view";
 import PedidosView from "./pedidos-view";
+import UsuariosView from "./usuarios-view";
 import { Button, Card, Field, Input, Spinner, Textarea, money } from "./ui";
 
-type Vista = "inicio" | "clientes" | "cotizaciones" | "pedidos" | "perfil";
+type Vista = "inicio" | "clientes" | "cotizaciones" | "pedidos" | "usuarios" | "perfil";
 
 interface NavItem {
 	id: Vista;
@@ -39,6 +41,7 @@ const NAV: NavItem[] = [
 	{ id: "clientes", label: "Clientes", icon: Users, roles: ["admin", "vendedor"] },
 	{ id: "cotizaciones", label: "Cotizaciones", icon: FileText, roles: ["admin", "vendedor"] },
 	{ id: "pedidos", label: "Pedidos", icon: Package, roles: ["admin", "vendedor", "produccion"] },
+	{ id: "usuarios", label: "Personal", icon: Shield, roles: ["admin"] },
 	{ id: "perfil", label: "Mi cuenta", icon: Settings, roles: ["admin", "vendedor", "produccion", "cliente"] },
 ];
 
@@ -116,6 +119,7 @@ export default function Dashboard() {
 					{vista === "clientes" && <ClientesView />}
 					{vista === "cotizaciones" && <CotizacionesView />}
 					{vista === "pedidos" && <PedidosView />}
+					{vista === "usuarios" && <UsuariosView />}
 					{vista === "perfil" && <Perfil />}
 				</div>
 			</main>
@@ -132,7 +136,10 @@ function Inicio({ rol }: { rol: Rol }) {
 
 	useEffect(() => {
 		(async () => {
-			const [pedidos, clientes] = await Promise.all([listarPedidos(), listarClientes()]);
+			const [pedidos, clientes] = await Promise.all([
+				listarPedidos().catch(() => []),
+				listarClientes().catch(() => []),
+			]);
 			setKpis({
 				total: pedidos.length,
 				produccion: pedidos.filter((p) => ["en_produccion", "control_calidad"].includes(p.estado)).length,

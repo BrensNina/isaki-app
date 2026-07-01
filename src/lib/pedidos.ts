@@ -62,10 +62,10 @@ export async function crearPedido(data: PedidoInput, vendedorUid: string): Promi
 	const anticipo = round2(data.anticipo || 0);
 
 	const requiereAnticipo = anticipo > 0;
-	const estado: EstadoPedido = requiereAnticipo ? "pendiente_anticipo" : "en_produccion";
+	const estado: EstadoPedido = requiereAnticipo ? "pendiente_anticipo" : "pendiente_produccion";
 	const notaInicial = requiereAnticipo
 		? "Pedido registrado. A la espera de confirmar el anticipo."
-		: "Pedido registrado sin anticipo. Pasa directo a producción.";
+		: "Pedido registrado sin anticipo. Pasa a cola de producción.";
 
 	const nuevo = {
 		clienteId: data.clienteId,
@@ -92,8 +92,16 @@ export async function crearPedido(data: PedidoInput, vendedorUid: string): Promi
 export async function confirmarAnticipo(id: string): Promise<void> {
 	await updateDoc(doc(getDb(), COL, id), {
 		anticipoConfirmado: true,
-		estado: "en_produccion" as EstadoPedido,
-		historial: arrayUnion(entrada("en_produccion", "Anticipo confirmado.")),
+		estado: "pendiente_produccion" as EstadoPedido,
+		historial: arrayUnion(entrada("pendiente_produccion", "Anticipo confirmado. Pasa a cola de producción.")),
+		updatedAt: serverTimestamp(),
+	});
+}
+
+/** Agrega un reporte de avance sin cambiar de estado (se asume que está en producción) */
+export async function reportarProgreso(id: string, nota: string): Promise<void> {
+	await updateDoc(doc(getDb(), COL, id), {
+		historial: arrayUnion(entrada("en_produccion", nota)),
 		updatedAt: serverTimestamp(),
 	});
 }

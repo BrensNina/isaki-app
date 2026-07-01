@@ -67,22 +67,20 @@ service cloud.firestore {
 
     // ---------------- users/{userId} ----------------
     match /users/{userId} {
-      allow read: if isOwner(userId);
+      allow read: if isOwner(userId) || rol() == 'admin';
 
-      allow create: if isOwner(userId)
+      allow create: if (isOwner(userId) || rol() == 'admin')
         && isValidProfile(request.resource.data, userId)
         && request.resource.data.createdAt is timestamp;
 
-      allow update: if isOwner(userId)
+      allow update: if (isOwner(userId) || rol() == 'admin')
         && isValidProfile(request.resource.data, userId)
-        // Immutable fields cannot change on update. `rol` may be SET the first
-        // time (migration of pre-`rol` docs) but, once present, cannot change —
-        // so a user cannot self-promote (only backend/console may change roles).
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.createdAt == resource.data.createdAt
-        && (!('rol' in resource.data) || request.resource.data.rol == resource.data.rol);
+        // Si no es admin, no puede cambiar su propio rol (si ya existe).
+        && (rol() == 'admin' || (!('rol' in resource.data) || request.resource.data.rol == resource.data.rol));
 
-      allow delete: if isOwner(userId);
+      allow delete: if isOwner(userId) || rol() == 'admin';
     }
 
     // ---------------- clientes/{clienteId} ----------------

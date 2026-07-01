@@ -11,6 +11,7 @@ import {
 	crearPedido,
 	eliminarPedido,
 	listarPedidos,
+	reportarProgreso,
 } from "@/lib/pedidos";
 import { COLORES, TALLAS } from "@/lib/catalog";
 import { ESTADOS } from "@/lib/types";
@@ -28,7 +29,10 @@ export default function PedidosView() {
 
 	async function recargar() {
 		setLoading(true);
-		const [p, c] = await Promise.all([listarPedidos(), listarClientes()]);
+		const [p, c] = await Promise.all([
+			listarPedidos().catch(() => [] as Pedido[]), 
+			listarClientes().catch(() => [] as Cliente[])
+		]);
 		setPedidos(p);
 		setClientes(c);
 		setLoading(false);
@@ -359,6 +363,7 @@ function PedidoDetalle({ pedido, onClose, onChanged }: { pedido: Pedido; onClose
 	}
 
 	const SIGUIENTE: Partial<Record<EstadoPedido, EstadoPedido>> = {
+		pendiente_produccion: "en_produccion",
 		en_produccion: "control_calidad",
 		control_calidad: "listo_entrega",
 		listo_entrega: "entregado",
@@ -439,12 +444,26 @@ function PedidoDetalle({ pedido, onClose, onChanged }: { pedido: Pedido; onClose
 					<div className="flex flex-wrap gap-2">
 						{pedido.estado === "pendiente_anticipo" && (
 							<Button disabled={busy} onClick={() => accion(() => confirmarAnticipo(pedido.id))}>
-								Confirmar anticipo → producción
+								Confirmar anticipo → cola de producción
+							</Button>
+						)}
+						{pedido.estado === "en_produccion" && (
+							<Button 
+								variant="secondary"
+								disabled={busy} 
+								onClick={() => {
+									const nota = prompt("Describe el avance (ej. 'Corte de tela finalizado', 'Pasando a bordado'):");
+									if (nota) accion(() => reportarProgreso(pedido.id, nota));
+								}}
+							>
+								Reportar Avance
 							</Button>
 						)}
 						{siguiente && (
 							<Button disabled={busy} onClick={() => accion(() => cambiarEstado(pedido.id, siguiente))}>
-								Avanzar a: {ESTADOS[siguiente].label}
+								{pedido.estado === "pendiente_produccion" ? "Iniciar Producción" : 
+								 pedido.estado === "en_produccion" ? "Finalizar (a Control Calidad)" :
+								 `Avanzar a: ${ESTADOS[siguiente].label}`}
 							</Button>
 						)}
 						{pedido.estado !== "entregado" && pedido.estado !== "cancelado" && (

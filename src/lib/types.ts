@@ -60,6 +60,7 @@ export type ClienteInput = Omit<
 export type EstadoPedido =
 	| "borrador"
 	| "pendiente_anticipo"
+	| "pendiente_produccion"
 	| "en_produccion"
 	| "control_calidad"
 	| "listo_entrega"
@@ -76,11 +77,12 @@ export interface EstadoMeta {
 export const ESTADOS: Record<EstadoPedido, EstadoMeta> = {
 	borrador: { label: "Borrador", orden: 0, badge: "bg-slate-100 text-slate-600" },
 	pendiente_anticipo: { label: "Pendiente de anticipo", orden: 1, badge: "bg-amber-50 text-amber-700" },
-	en_produccion: { label: "En producción", orden: 2, badge: "bg-blue-50 text-blue-700" },
-	control_calidad: { label: "Control de calidad", orden: 3, badge: "bg-indigo-50 text-indigo-700" },
-	listo_entrega: { label: "Listo para entrega", orden: 4, badge: "bg-violet-50 text-violet-700" },
-	entregado: { label: "Entregado", orden: 5, badge: "bg-green-50 text-green-700" },
-	cancelado: { label: "Cancelado", orden: 6, badge: "bg-red-50 text-red-700" },
+	pendiente_produccion: { label: "Cola de producción", orden: 2, badge: "bg-yellow-50 text-yellow-700" },
+	en_produccion: { label: "En producción", orden: 3, badge: "bg-blue-50 text-blue-700" },
+	control_calidad: { label: "Control de calidad", orden: 4, badge: "bg-indigo-50 text-indigo-700" },
+	listo_entrega: { label: "Listo para entrega", orden: 5, badge: "bg-violet-50 text-violet-700" },
+	entregado: { label: "Entregado", orden: 6, badge: "bg-green-50 text-green-700" },
+	cancelado: { label: "Cancelado", orden: 7, badge: "bg-red-50 text-red-700" },
 };
 
 /**

@@ -17,6 +17,7 @@ const firebaseConfig = {
 let appInstance: FirebaseApp | undefined;
 let authInstance: Auth | undefined;
 let dbInstance: Firestore | undefined;
+let firebaseAppSecondary: FirebaseApp | undefined;
 
 export function getFirebaseApp(): FirebaseApp {
 	if (!appInstance) {
@@ -28,6 +29,13 @@ export function getFirebaseApp(): FirebaseApp {
 export function getFirebaseAuth(): Auth {
 	if (!authInstance) authInstance = getAuth(getFirebaseApp());
 	return authInstance;
+}
+
+export function getSecondaryAuth(): Auth {
+	if (!firebaseAppSecondary) {
+		firebaseAppSecondary = initializeApp(firebaseConfig, "SecondaryApp");
+	}
+	return getAuth(firebaseAppSecondary);
 }
 
 export function getDb(): Firestore {
