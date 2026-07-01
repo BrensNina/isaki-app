@@ -84,25 +84,24 @@ service cloud.firestore {
     }
 
     // ---------------- clientes/{clienteId} ----------------
-    // Clientes mayoristas: gestionados por el personal interno (admin/vendedor).
-    // Prototipo revisado-pero-no-endurecido: la validación de esquema es ligera.
     match /clientes/{clienteId} {
-      allow read, create, update, delete: if isStaff();
+      allow read, update, delete: if rol() == 'admin' || (rol() == 'vendedor' && resource.data.vendedorUid == request.auth.uid);
+      allow create: if rol() == 'admin' || (rol() == 'vendedor' && request.resource.data.vendedorUid == request.auth.uid);
     }
 
     // ---------------- pedidos/{pedidoId} ----------------
-    // Lectura para todo el personal operativo (incluye producción); la creación
-    // y edición/borrado quedan para staff. Producción actualiza estados de flujo.
+    // Lectura para admin y produccion (todos), vendedor (solo los suyos).
     match /pedidos/{pedidoId} {
-      allow read: if isOperativo();
-      allow create, delete: if isStaff();
-      allow update: if isOperativo();
+      allow read: if rol() in ['admin', 'produccion'] || (rol() == 'vendedor' && resource.data.vendedorUid == request.auth.uid);
+      allow create: if rol() == 'admin' || (rol() == 'vendedor' && request.resource.data.vendedorUid == request.auth.uid);
+      allow update: if rol() in ['admin', 'produccion'] || (rol() == 'vendedor' && resource.data.vendedorUid == request.auth.uid);
+      allow delete: if rol() == 'admin' || (rol() == 'vendedor' && resource.data.vendedorUid == request.auth.uid);
     }
 
     // ---------------- cotizaciones/{cotizacionId} ----------------
-    // Cotizaciones: gestionadas por el personal interno (admin/vendedor).
     match /cotizaciones/{cotizacionId} {
-      allow read, create, update, delete: if isStaff();
+      allow read, update, delete: if rol() == 'admin' || (rol() == 'vendedor' && resource.data.vendedorUid == request.auth.uid);
+      allow create: if rol() == 'admin' || (rol() == 'vendedor' && request.resource.data.vendedorUid == request.auth.uid);
     }
 
     // Default deny everything else.

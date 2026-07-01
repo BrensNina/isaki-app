@@ -9,6 +9,7 @@ import {
 	query,
 	serverTimestamp,
 	updateDoc,
+	where,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import { crearPedido } from "./pedidos";
@@ -20,9 +21,17 @@ function round2(n: number): number {
 	return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
-export async function listarCotizaciones(): Promise<Cotizacion[]> {
-	const snap = await getDocs(query(collection(getDb(), COL), orderBy("createdAt", "desc")));
-	return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Cotizacion);
+export async function listarCotizaciones(uid: string, rol: string): Promise<Cotizacion[]> {
+	let q = query(collection(getDb(), COL), orderBy("createdAt", "desc"));
+	if (rol === "vendedor") {
+		q = query(collection(getDb(), COL), where("vendedorUid", "==", uid));
+	}
+	const snap = await getDocs(q);
+	const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Cotizacion);
+	if (rol === "vendedor") {
+		data.sort((a: any, b: any) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+	}
+	return data;
 }
 
 export async function obtenerCotizacion(id: string): Promise<Cotizacion | null> {

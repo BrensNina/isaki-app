@@ -18,7 +18,7 @@ import type { Cliente, Cotizacion, EstadoCotizacion, ItemPedido } from "@/lib/ty
 import { Badge, Button, EmptyState, Field, Input, Modal, Select, Spinner, Textarea, money } from "./ui";
 
 export default function CotizacionesView() {
-	const { user } = useAuth();
+	const { user, profile } = useAuth();
 	const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([]);
 	const [clientes, setClientes] = useState<Cliente[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -28,7 +28,10 @@ export default function CotizacionesView() {
 
 	async function recargar() {
 		setLoading(true);
-		const [cot, cli] = await Promise.all([listarCotizaciones(), listarClientes()]);
+		const [cot, cli] = await Promise.all([
+			listarCotizaciones(user!.uid, profile!.rol).catch(() => [] as Cotizacion[]), 
+			listarClientes(user!.uid, profile!.rol).catch(() => [] as Cliente[])
+		]);
 		setCotizaciones(cot);
 		setClientes(cli);
 		setLoading(false);

@@ -19,7 +19,7 @@ import type { Cliente, EstadoPedido, HistorialEntry, ItemPedido, Pedido } from "
 import { Badge, Button, EmptyState, Field, Input, Modal, Select, Spinner, Textarea, money } from "./ui";
 
 export default function PedidosView() {
-	const { user } = useAuth();
+	const { user, profile } = useAuth();
 	const [pedidos, setPedidos] = useState<Pedido[]>([]);
 	const [clientes, setClientes] = useState<Cliente[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -30,8 +30,8 @@ export default function PedidosView() {
 	async function recargar() {
 		setLoading(true);
 		const [p, c] = await Promise.all([
-			listarPedidos().catch(() => [] as Pedido[]), 
-			listarClientes().catch(() => [] as Cliente[])
+			listarPedidos(user!.uid, profile!.rol).catch(() => [] as Pedido[]), 
+			listarClientes(user!.uid, profile!.rol).catch(() => [] as Cliente[])
 		]);
 		setPedidos(p);
 		setClientes(c);

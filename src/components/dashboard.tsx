@@ -130,15 +130,16 @@ export default function Dashboard() {
 // ------------------------------ Panel principal (KPIs) ------------------------------
 
 function Inicio({ rol }: { rol: Rol }) {
-	const { profile } = useAuth();
+	const { user, profile } = useAuth();
 	const [loading, setLoading] = useState(true);
 	const [kpis, setKpis] = useState({ total: 0, produccion: 0, entregados: 0, porCobrar: 0, clientes: 0 });
 
 	useEffect(() => {
 		(async () => {
+			if (!user || !profile) return; // Esperar a que user y profile estén disponibles
 			const [pedidos, clientes] = await Promise.all([
-				listarPedidos().catch(() => []),
-				listarClientes().catch(() => []),
+				listarPedidos(user.uid, profile.rol).catch(() => []),
+				listarClientes(user.uid, profile.rol).catch(() => []),
 			]);
 			setKpis({
 				total: pedidos.length,

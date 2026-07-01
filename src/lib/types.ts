@@ -28,6 +28,7 @@ export type TipoEntrega = "local" | "agencia";
  */
 export interface Cliente {
 	id: string;
+	vendedorUid: string;
 	razonSocial: string; // nombre completo o razón social (RF-02)
 	tipoCliente: TipoCliente;
 	dniRuc: string; // DNI o RUC (RF-03)

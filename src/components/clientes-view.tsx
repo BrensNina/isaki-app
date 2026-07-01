@@ -23,7 +23,7 @@ const VACIO: ClienteInput = {
 };
 
 export default function ClientesView() {
-	const { user } = useAuth();
+	const { user, profile } = useAuth();
 	const [clientes, setClientes] = useState<Cliente[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [editando, setEditando] = useState<Cliente | null>(null);
@@ -32,7 +32,7 @@ export default function ClientesView() {
 
 	async function recargar() {
 		setLoading(true);
-		setClientes(await listarClientes());
+		setClientes(await listarClientes(user!.uid, profile!.rol));
 		setLoading(false);
 	}
 
@@ -211,8 +211,11 @@ function ClienteForm({
 		if (!validar()) return;
 		setBusy(true);
 		try {
-			if (inicial) await actualizarCliente(inicial.id, form);
-			else await crearCliente(form, vendedorUid);
+			if (inicial) {
+				await actualizarCliente(inicial.id, form);
+			} else {
+				await crearCliente(form, vendedorUid);
+			}
 			onSaved();
 		} catch (err) {
 			setErrors({ _: err instanceof Error ? err.message : "No se pudo guardar." });

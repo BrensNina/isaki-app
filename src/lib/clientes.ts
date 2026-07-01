@@ -14,16 +14,25 @@ import {
 	query,
 	serverTimestamp,
 	updateDoc,
+	where,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import type { Cliente, ClienteInput } from "./types";
 
 const COL = "clientes";
 
-/** Lista todos los clientes, del más reciente al más antiguo. */
-export async function listarClientes(): Promise<Cliente[]> {
-	const snap = await getDocs(query(collection(getDb(), COL), orderBy("createdAt", "desc")));
-	return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Cliente);
+/** Lista los clientes del vendedor, o todos si es admin. */
+export async function listarClientes(uid: string, rol: string): Promise<Cliente[]> {
+	let q = query(collection(getDb(), COL), orderBy("createdAt", "desc"));
+	if (rol === "vendedor") {
+		q = query(collection(getDb(), COL), where("vendedorUid", "==", uid));
+	}
+	const snap = await getDocs(q);
+	const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Cliente);
+	if (rol === "vendedor") {
+		data.sort((a: any, b: any) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+	}
+	return data;
 }
 
 /** Obtiene un cliente por id, o `null` si no existe. */
@@ -36,7 +45,7 @@ export async function obtenerCliente(id: string): Promise<Cliente | null> {
 export async function crearCliente(data: ClienteInput, vendedorUid: string): Promise<string> {
 	const ref = await addDoc(collection(getDb(), COL), {
 		...limpiar(data),
-		createdBy: vendedorUid,
+		vendedorUid,
 		createdAt: serverTimestamp(),
 		updatedAt: serverTimestamp(),
 	});

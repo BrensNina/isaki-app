@@ -32,9 +32,17 @@ export function calcularTotales(items: ItemPedido[]): { items: ItemPedido[]; mon
 }
 
 /** Lista todos los pedidos, del más reciente al más antiguo. */
-export async function listarPedidos(): Promise<Pedido[]> {
-	const snap = await getDocs(query(collection(getDb(), COL), orderBy("createdAt", "desc")));
-	return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Pedido);
+export async function listarPedidos(uid: string, rol: string): Promise<Pedido[]> {
+	let q = query(collection(getDb(), COL), orderBy("createdAt", "desc"));
+	if (rol === "vendedor") {
+		q = query(collection(getDb(), COL), where("vendedorUid", "==", uid));
+	}
+	const snap = await getDocs(q);
+	const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Pedido);
+	if (rol === "vendedor") {
+		data.sort((a: any, b: any) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+	}
+	return data;
 }
 
 /** Lista los pedidos de un cliente (historial de pedidos — RF-06). */
