@@ -5,7 +5,8 @@ import { Plus, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { listarUsuarios, crearUsuarioPorAdmin, eliminarUsuarioAdmin } from "@/lib/usuarios";
 import { ROL_LABEL } from "@/lib/types";
-import type { UserProfile, Rol } from "@/lib/types";
+import type { Rol } from "@/lib/types";
+import type { UserProfile } from "@/lib/auth-context";
 import { Badge, Button, EmptyState, Field, Input, Modal, Select, Spinner } from "./ui";
 
 export default function UsuariosView() {
@@ -72,7 +73,7 @@ export default function UsuariosView() {
 									<td className="px-4 py-3 font-medium">{u.displayName}</td>
 									<td className="px-4 py-3 text-muted">{u.email}</td>
 									<td className="px-4 py-3">
-										<Badge>{ROL_LABEL[u.rol]}</Badge>
+										<Badge>{ROL_LABEL[u.rol as Rol]}</Badge>
 									</td>
 									<td className="px-4 py-3 text-right">
 										{u.rol === "produccion" && (
@@ -107,8 +108,8 @@ function UsuarioForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [nombre, setNombre] = useState("");
-	
-	const [error, setError] = useState("");
+	const [rol, setRol] = useState<Rol>("vendedor");
+	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 
 	async function handleSubmit(ev: React.FormEvent) {
@@ -123,7 +124,7 @@ function UsuarioForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
 
 		setBusy(true);
 		try {
-			await crearUsuarioPorAdmin(email, password, nombre, "produccion");
+			await crearUsuarioPorAdmin(email, password, nombre, rol);
 			onSaved();
 		} catch (err: any) {
 			// Traducir algunos errores comunes de Firebase
@@ -147,6 +148,13 @@ function UsuarioForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
 				</Field>
 				<Field label="Correo electrónico">
 					<Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="juan@empresa.com" />
+				</Field>
+				<Field label="Rol">
+					<Select value={rol} onChange={(e) => setRol(e.target.value as Rol)}>
+						<option value="vendedor">Vendedor</option>
+						<option value="produccion">Producción</option>
+						<option value="admin">Administrador</option>
+					</Select>
 				</Field>
 				<Field label="Contraseña temporal">
 					<Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 6 caracteres" />

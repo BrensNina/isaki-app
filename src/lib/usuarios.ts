@@ -1,7 +1,8 @@
 import { collection, doc, getDocs, updateDoc, setDoc, query, orderBy, deleteDoc } from "firebase/firestore";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile, setPersistence, inMemoryPersistence } from "firebase/auth";
 import { getDb, getSecondaryAuth } from "./firebase";
-import type { UserProfile, Rol } from "./types";
+import type { Rol } from "./types";
+import type { UserProfile } from "./auth-context";
 
 export async function listarUsuarios(): Promise<UserProfile[]> {
 	const db = getDb();
@@ -33,6 +34,7 @@ export async function crearUsuarioPorAdmin(
 ): Promise<void> {
 	// 1. Crear el Auth user en la app secundaria
 	const secondaryAuth = getSecondaryAuth();
+	await setPersistence(secondaryAuth, inMemoryPersistence);
 	const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
 	const user = cred.user;
 
@@ -57,6 +59,7 @@ export async function crearUsuarioPorAdmin(
 	await setDoc(ref, {
 		...profile,
 		createdAt: new Date(),
+		updatedAt: new Date(),
 	});
 
 	// Cerrar sesión en la instancia secundaria (opcional pero recomendado)

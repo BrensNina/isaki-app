@@ -69,11 +69,8 @@ export async function crearPedido(data: PedidoInput, vendedorUid: string): Promi
 	const { items, montoTotal } = calcularTotales(data.items);
 	const anticipo = round2(data.anticipo || 0);
 
-	const requiereAnticipo = anticipo > 0;
-	const estado: EstadoPedido = requiereAnticipo ? "pendiente_anticipo" : "pendiente_produccion";
-	const notaInicial = requiereAnticipo
-		? "Pedido registrado. A la espera de confirmar el anticipo."
-		: "Pedido registrado sin anticipo. Pasa a cola de producción.";
+	const estado: EstadoPedido = "registrado";
+	const notaInicial = "Pedido registrado por el vendedor.";
 
 	const nuevo = {
 		clienteId: data.clienteId,
@@ -82,7 +79,7 @@ export async function crearPedido(data: PedidoInput, vendedorUid: string): Promi
 		items,
 		montoTotal,
 		anticipo,
-		anticipoConfirmado: !requiereAnticipo,
+		anticipoConfirmado: false,
 		saldo: round2(montoTotal - anticipo),
 		fechaEntregaPactada: data.fechaEntregaPactada ?? null,
 		notas: data.notas ?? "",
@@ -96,12 +93,30 @@ export async function crearPedido(data: PedidoInput, vendedorUid: string): Promi
 	return ref.id;
 }
 
-/** Confirma la recepción del anticipo: habilita el pedido para producción. */
-export async function confirmarAnticipo(id: string): Promise<void> {
+export async function actualizarPedido(id: string, data: PedidoInput): Promise<void> {
+	const { items, montoTotal } = calcularTotales(data.items);
+	const anticipo = round2(data.anticipo || 0);
+
+	await updateDoc(doc(getDb(), COL, id), {
+		clienteId: data.clienteId,
+		clienteNombre: data.clienteNombre,
+		items,
+		montoTotal,
+		anticipo,
+		saldo: round2(montoTotal - anticipo),
+		fechaEntregaPactada: data.fechaEntregaPactada ?? null,
+		notas: data.notas ?? "",
+		updatedAt: serverTimestamp(),
+		historial: arrayUnion({ estado: "registrado", fecha: new Date().toISOString(), nota: "Pedido actualizado (datos editados)." }),
+	});
+}
+
+/** Confirma la recepción del anticipo y aprueba el pedido para producción. */
+export async function aprobarPedidoAProduccion(id: string): Promise<void> {
 	await updateDoc(doc(getDb(), COL, id), {
 		anticipoConfirmado: true,
 		estado: "pendiente_produccion" as EstadoPedido,
-		historial: arrayUnion(entrada("pendiente_produccion", "Anticipo confirmado. Pasa a cola de producción.")),
+		historial: arrayUnion(entrada("pendiente_produccion", "Pedido aprobado y anticipo confirmado por el vendedor. Pasa a producción.")),
 		updatedAt: serverTimestamp(),
 	});
 }

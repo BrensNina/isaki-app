@@ -7,14 +7,15 @@ import { listarClientes } from "@/lib/clientes";
 import {
 	calcularTotales,
 	cambiarEstado,
-	confirmarAnticipo,
 	crearPedido,
+	actualizarPedido,
 	eliminarPedido,
 	listarPedidos,
 	reportarProgreso,
+	aprobarPedidoAProduccion,
 } from "@/lib/pedidos";
 import { COLORES, TALLAS } from "@/lib/catalog";
-import { ESTADOS } from "@/lib/types";
+import { ESTADOS, getEstadoMeta } from "@/lib/types";
 import type { Cliente, EstadoPedido, HistorialEntry, ItemPedido, Pedido } from "@/lib/types";
 import { Badge, Button, EmptyState, Field, Input, Modal, Select, Spinner, Textarea, money } from "./ui";
 
@@ -24,8 +25,10 @@ export default function PedidosView() {
 	const [clientes, setClientes] = useState<Cliente[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [creando, setCreando] = useState(false);
+	const [editando, setEditando] = useState<Pedido | null>(null);
 	const [verPedido, setVerPedido] = useState<Pedido | null>(null);
 	const [filtroEstado, setFiltroEstado] = useState<EstadoPedido | "">("");
+	const rol = profile?.rol ?? "vendedor";
 
 	async function recargar() {
 		setLoading(true);
@@ -71,7 +74,7 @@ export default function PedidosView() {
 					if (n === 0) return null;
 					return (
 						<EstadoChip key={e} activo={filtroEstado === e} onClick={() => setFiltroEstado(e)}>
-							{ESTADOS[e].label} ({n})
+							{getEstadoMeta(e).label} ({n})
 						</EstadoChip>
 					);
 				})}
@@ -106,7 +109,7 @@ export default function PedidosView() {
 									</td>
 									<td className="px-4 py-3 tabular-nums">{money(p.montoTotal)}</td>
 									<td className="px-4 py-3">
-										<Badge className={ESTADOS[p.estado].badge}>{ESTADOS[p.estado].label}</Badge>
+										<Badge className={getEstadoMeta(p.estado).badge}>{getEstadoMeta(p.estado).label}</Badge>
 									</td>
 									<td className="px-4 py-3 text-right">
 										<ChevronRight className="ml-auto h-4 w-4 text-muted" />
@@ -118,13 +121,15 @@ export default function PedidosView() {
 				</div>
 			)}
 
-			{creando && (
+			{(creando || editando) && (
 				<PedidoForm
 					clientes={clientes}
 					vendedorUid={user!.uid}
-					onClose={() => setCreando(false)}
+					inicial={editando || undefined}
+					onClose={() => { setCreando(false); setEditando(null); }}
 					onSaved={async () => {
 						setCreando(false);
+						setEditando(null);
 						await recargar();
 					}}
 				/>
@@ -133,7 +138,12 @@ export default function PedidosView() {
 			{verPedido && (
 				<PedidoDetalle
 					pedido={verPedido}
+					rol={rol}
 					onClose={() => setVerPedido(null)}
+					onEdit={() => {
+						setEditando(verPedido);
+						setVerPedido(null);
+					}}
 					onChanged={async () => {
 						setVerPedido(null);
 						await recargar();
@@ -172,19 +182,21 @@ const ITEM_VACIO: ItemPedido = {
 function PedidoForm({
 	clientes,
 	vendedorUid,
+	inicial,
 	onClose,
 	onSaved,
 }: {
 	clientes: Cliente[];
 	vendedorUid: string;
+	inicial?: Pedido;
 	onClose: () => void;
 	onSaved: () => void;
 }) {
-	const [clienteId, setClienteId] = useState("");
-	const [items, setItems] = useState<ItemPedido[]>([{ ...ITEM_VACIO }]);
-	const [anticipo, setAnticipo] = useState("");
-	const [fechaEntrega, setFechaEntrega] = useState("");
-	const [notas, setNotas] = useState("");
+	const [clienteId, setClienteId] = useState(inicial?.clienteId || "");
+	const [items, setItems] = useState<ItemPedido[]>(inicial ? inicial.items : [{ ...ITEM_VACIO }]);
+	const [anticipo, setAnticipo] = useState(inicial ? String(inicial.anticipo) : "");
+	const [fechaEntrega, setFechaEntrega] = useState(inicial?.fechaEntregaPactada || "");
+	const [notas, setNotas] = useState(inicial?.notas || "");
 	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [busy, setBusy] = useState(false);
 
@@ -223,17 +235,19 @@ function PedidoForm({
 		setBusy(true);
 		try {
 			const cliente = clientes.find((c) => c.id === clienteId)!;
-			await crearPedido(
-				{
-					clienteId,
-					clienteNombre: cliente.razonSocial,
-					items,
-					anticipo: Number(anticipo || 0),
-					fechaEntregaPactada: fechaEntrega || undefined,
-					notas,
-				},
-				vendedorUid,
-			);
+			const data = {
+				clienteId,
+				clienteNombre: clientes.find((c) => c.id === clienteId)?.razonSocial || "Cliente Desconocido",
+				items,
+				anticipo: Number(anticipo || 0),
+				fechaEntregaPactada: fechaEntrega || undefined,
+				notas: notas.trim(),
+			};
+			if (inicial) {
+				await actualizarPedido(inicial.id, data);
+			} else {
+				await crearPedido(data, vendedorUid);
+			}
 			onSaved();
 		} catch (err) {
 			setErrors({ _: err instanceof Error ? err.message : "No se pudo guardar." });
@@ -242,7 +256,7 @@ function PedidoForm({
 	}
 
 	return (
-		<Modal title="Nuevo pedido" onClose={onClose} wide>
+		<Modal title={inicial ? "Editar pedido" : "Nuevo pedido"} onClose={onClose} wide>
 			<form onSubmit={handleSubmit} className="flex flex-col gap-4">
 				<Field label="Cliente" error={errors.cliente}>
 					<Select value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
@@ -349,7 +363,7 @@ function PedidoForm({
 
 // --------------------------- Detalle del pedido ---------------------------
 
-function PedidoDetalle({ pedido, onClose, onChanged }: { pedido: Pedido; onClose: () => void; onChanged: () => void }) {
+function PedidoDetalle({ pedido, rol, onClose, onChanged, onEdit }: { pedido: Pedido; rol: string; onClose: () => void; onChanged: () => void; onEdit?: () => void; }) {
 	const [busy, setBusy] = useState(false);
 
 	async function accion(fn: () => Promise<void>) {
@@ -366,7 +380,6 @@ function PedidoDetalle({ pedido, onClose, onChanged }: { pedido: Pedido; onClose
 		pendiente_produccion: "en_produccion",
 		en_produccion: "control_calidad",
 		control_calidad: "listo_entrega",
-		listo_entrega: "entregado",
 	};
 	const siguiente = SIGUIENTE[pedido.estado];
 
@@ -380,7 +393,14 @@ function PedidoDetalle({ pedido, onClose, onChanged }: { pedido: Pedido; onClose
 							<p className="text-sm text-muted">Entrega pactada: {pedido.fechaEntregaPactada}</p>
 						)}
 					</div>
-					<Badge className={ESTADOS[pedido.estado].badge}>{ESTADOS[pedido.estado].label}</Badge>
+					<div className="flex items-center gap-2">
+						{onEdit && (rol === "admin" || (rol === "vendedor" && (pedido.estado === "registrado" || pedido.estado === "cotizado"))) && (
+							<Button variant="secondary" className="h-8 px-3 text-xs" onClick={onEdit}>
+								Editar
+							</Button>
+						)}
+						<Badge className={getEstadoMeta(pedido.estado).badge}>{getEstadoMeta(pedido.estado).label}</Badge>
+					</div>
 				</div>
 
 				<div className="overflow-hidden rounded-xl border border-border">
@@ -430,53 +450,72 @@ function PedidoDetalle({ pedido, onClose, onChanged }: { pedido: Pedido; onClose
 				{pedido.historial && pedido.historial.length > 0 && <Timeline historial={pedido.historial} />}
 
 					<div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
-					<Button
-						variant="danger"
-						className="h-9 px-3"
-						disabled={busy}
-						onClick={() => {
-							if (confirm("¿Eliminar este pedido?")) accion(() => eliminarPedido(pedido.id));
-						}}
-					>
-						<Trash2 className="h-4 w-4" /> Eliminar
-					</Button>
+					{(rol === "admin" || (rol === "vendedor" && pedido.estado === "registrado")) && (
+						<Button
+							variant="danger"
+							className="h-9 px-3"
+							disabled={busy}
+							onClick={() => {
+								if (confirm("¿Eliminar este pedido?")) accion(() => eliminarPedido(pedido.id));
+							}}
+						>
+							<Trash2 className="h-4 w-4" /> Eliminar
+						</Button>
+					)}
 
 					<div className="flex flex-wrap gap-2">
-						{pedido.estado === "solicitado" && (
-							<Button disabled={busy} onClick={() => accion(() => cambiarEstado(pedido.id, "cotizado", "Cotización enviada al cliente."))}>
+						{rol === "vendedor" && pedido.estado === "registrado" && (
+							<>
+								<Button disabled={busy} variant="secondary" onClick={() => accion(() => cambiarEstado(pedido.id, "esperando_cotizacion", "Se solicitó cotización a administración."))}>
+									Solicitar Cotización a Admin
+								</Button>
+								<Button disabled={busy} onClick={() => accion(() => aprobarPedidoAProduccion(pedido.id))}>
+									Aprobar Directo a Producción
+								</Button>
+							</>
+						)}
+						{rol === "vendedor" && pedido.estado === "cotizado" && (
+							<Button disabled={busy} onClick={() => accion(() => aprobarPedidoAProduccion(pedido.id))}>
+								Aprobar y Confirmar Anticipo
+							</Button>
+						)}
+
+						{rol === "admin" && pedido.estado === "esperando_cotizacion" && (
+							<Button disabled={busy} onClick={() => accion(() => cambiarEstado(pedido.id, "cotizado", "Cotización enviada al vendedor."))}>
 								Enviar Cotización
 							</Button>
 						)}
-						{pedido.estado === "cotizado" && (
-							<Button disabled={busy} onClick={() => accion(() => cambiarEstado(pedido.id, pedido.anticipo > 0 ? "pendiente_anticipo" : "pendiente_produccion", "El cliente aprobó la cotización."))}>
-								Cliente Aceptó Cotización
+						{rol === "admin" && pedido.estado === "listo_entrega" && (
+							<Button disabled={busy} onClick={() => accion(() => cambiarEstado(pedido.id, "entregado", "Pedido entregado con éxito."))}>
+								Marcar como Entregado
 							</Button>
 						)}
-						{pedido.estado === "pendiente_anticipo" && (
-							<Button disabled={busy} onClick={() => accion(() => confirmarAnticipo(pedido.id))}>
-								Confirmar anticipo → cola de producción
-							</Button>
+
+						{rol === "produccion" && (
+							<>
+								{siguiente && (
+									<Button disabled={busy} onClick={() => accion(() => cambiarEstado(pedido.id, siguiente))}>
+										{pedido.estado === "pendiente_produccion" ? "Iniciar Producción" : 
+										 pedido.estado === "en_produccion" ? "Finalizar (a Control Calidad)" :
+										 `Aprobar Calidad (Listo para entrega)`}
+									</Button>
+								)}
+								{pedido.estado === "en_produccion" && (
+									<Button 
+										variant="secondary"
+										disabled={busy} 
+										onClick={() => {
+											const nota = prompt("Describe el avance (ej. 'Corte de tela finalizado', 'Pasando a bordado'):");
+											if (nota) accion(() => reportarProgreso(pedido.id, nota));
+										}}
+									>
+										Reportar Avance
+									</Button>
+								)}
+							</>
 						)}
-						{pedido.estado === "en_produccion" && (
-							<Button 
-								variant="secondary"
-								disabled={busy} 
-								onClick={() => {
-									const nota = prompt("Describe el avance (ej. 'Corte de tela finalizado', 'Pasando a bordado'):");
-									if (nota) accion(() => reportarProgreso(pedido.id, nota));
-								}}
-							>
-								Reportar Avance
-							</Button>
-						)}
-						{siguiente && (
-							<Button disabled={busy} onClick={() => accion(() => cambiarEstado(pedido.id, siguiente))}>
-								{pedido.estado === "pendiente_produccion" ? "Iniciar Producción" : 
-								 pedido.estado === "en_produccion" ? "Finalizar (a Control Calidad)" :
-								 `Avanzar a: ${ESTADOS[siguiente].label}`}
-							</Button>
-						)}
-						{pedido.estado !== "entregado" && pedido.estado !== "cancelado" && (
+
+						{rol === "admin" && pedido.estado !== "entregado" && pedido.estado !== "cancelado" && (
 							<Button variant="secondary" disabled={busy} onClick={() => accion(() => cambiarEstado(pedido.id, "cancelado", "Pedido cancelado."))}>
 								Cancelar pedido
 							</Button>
@@ -506,7 +545,7 @@ function Timeline({ historial }: { historial: HistorialEntry[] }) {
 						</div>
 						<div className="pb-4">
 							<div className="flex flex-wrap items-center gap-2">
-								<Badge className={ESTADOS[h.estado].badge}>{ESTADOS[h.estado].label}</Badge>
+								<Badge className={getEstadoMeta(h.estado).badge}>{getEstadoMeta(h.estado).label}</Badge>
 								<span className="text-xs text-muted">{formatFecha(h.fecha)}</span>
 							</div>
 							{h.nota && <p className="mt-1 text-xs text-muted">{h.nota}</p>}

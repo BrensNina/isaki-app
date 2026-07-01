@@ -49,7 +49,7 @@ export interface Cliente {
 /** Datos que el formulario envía para crear/editar un cliente (sin metadatos). */
 export type ClienteInput = Omit<
 	Cliente,
-	"id" | "createdBy" | "createdAt" | "updatedAt"
+	"id" | "vendedorUid" | "createdBy" | "createdAt" | "updatedAt"
 >;
 
 // ----------------------------- Pedidos ------------------------------
@@ -59,10 +59,9 @@ export type ClienteInput = Omit<
  * secuencia y se usa para la cola de producción (HU-16).
  */
 export type EstadoPedido =
-	| "borrador"
-	| "solicitado"
+	| "registrado"
+	| "esperando_cotizacion"
 	| "cotizado"
-	| "pendiente_anticipo"
 	| "pendiente_produccion"
 	| "en_produccion"
 	| "control_calidad"
@@ -78,17 +77,20 @@ export interface EstadoMeta {
 }
 
 export const ESTADOS: Record<EstadoPedido, EstadoMeta> = {
-	borrador: { label: "Borrador", orden: 0, badge: "bg-slate-100 text-slate-600" },
-	solicitado: { label: "Solicitado", orden: 1, badge: "bg-stone-50 text-stone-600" },
-	cotizado: { label: "Esperando Aprobación", orden: 2, badge: "bg-cyan-50 text-cyan-700" },
-	pendiente_anticipo: { label: "Pendiente de anticipo", orden: 3, badge: "bg-amber-50 text-amber-700" },
-	pendiente_produccion: { label: "Cola de producción", orden: 4, badge: "bg-yellow-50 text-yellow-700" },
-	en_produccion: { label: "En producción", orden: 5, badge: "bg-blue-50 text-blue-700" },
-	control_calidad: { label: "Control de calidad", orden: 6, badge: "bg-indigo-50 text-indigo-700" },
-	listo_entrega: { label: "Listo para entrega", orden: 7, badge: "bg-violet-50 text-violet-700" },
-	entregado: { label: "Entregado", orden: 8, badge: "bg-green-50 text-green-700" },
-	cancelado: { label: "Cancelado", orden: 9, badge: "bg-red-50 text-red-700" },
+	registrado: { label: "Registrado (Sin enviar)", orden: 0, badge: "bg-slate-100 text-slate-600" },
+	esperando_cotizacion: { label: "Esperando Cotización", orden: 1, badge: "bg-stone-50 text-stone-600" },
+	cotizado: { label: "Cotizado / Esperando Aprobación", orden: 2, badge: "bg-cyan-50 text-cyan-700" },
+	pendiente_produccion: { label: "Cola de producción", orden: 3, badge: "bg-yellow-50 text-yellow-700" },
+	en_produccion: { label: "En producción", orden: 4, badge: "bg-blue-50 text-blue-700" },
+	control_calidad: { label: "Control de calidad", orden: 5, badge: "bg-indigo-50 text-indigo-700" },
+	listo_entrega: { label: "Listo para entrega", orden: 6, badge: "bg-violet-50 text-violet-700" },
+	entregado: { label: "Entregado", orden: 7, badge: "bg-green-50 text-green-700" },
+	cancelado: { label: "Cancelado", orden: 8, badge: "bg-red-50 text-red-700" },
 };
+
+export function getEstadoMeta(estado: string): EstadoMeta {
+	return ESTADOS[estado as EstadoPedido] || { label: estado, orden: -1, badge: "bg-gray-100 text-gray-600" };
+}
 
 /**
  * Una entrada del historial de seguimiento del pedido (entidad SEGUIMIENTO_PEDIDO).
