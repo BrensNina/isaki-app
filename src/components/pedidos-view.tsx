@@ -442,6 +442,16 @@ function PedidoDetalle({ pedido, onClose, onChanged }: { pedido: Pedido; onClose
 					</Button>
 
 					<div className="flex flex-wrap gap-2">
+						{pedido.estado === "solicitado" && (
+							<Button disabled={busy} onClick={() => accion(() => cambiarEstado(pedido.id, "cotizado", "Cotización enviada al cliente."))}>
+								Enviar Cotización
+							</Button>
+						)}
+						{pedido.estado === "cotizado" && (
+							<Button disabled={busy} onClick={() => accion(() => cambiarEstado(pedido.id, pedido.anticipo > 0 ? "pendiente_anticipo" : "pendiente_produccion", "El cliente aprobó la cotización."))}>
+								Cliente Aceptó Cotización
+							</Button>
+						)}
 						{pedido.estado === "pendiente_anticipo" && (
 							<Button disabled={busy} onClick={() => accion(() => confirmarAnticipo(pedido.id))}>
 								Confirmar anticipo → cola de producción

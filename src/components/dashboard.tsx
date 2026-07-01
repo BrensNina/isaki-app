@@ -22,12 +22,11 @@ import { listarPedidos } from "@/lib/pedidos";
 import { ROL_LABEL } from "@/lib/types";
 import type { Rol } from "@/lib/types";
 import ClientesView from "./clientes-view";
-import CotizacionesView from "./cotizaciones-view";
 import PedidosView from "./pedidos-view";
 import UsuariosView from "./usuarios-view";
 import { Button, Card, Field, Input, Spinner, Textarea, money } from "./ui";
 
-type Vista = "inicio" | "clientes" | "cotizaciones" | "pedidos" | "usuarios" | "perfil";
+type Vista = "inicio" | "clientes" | "pedidos" | "usuarios" | "perfil";
 
 interface NavItem {
 	id: Vista;
@@ -37,9 +36,8 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-	{ id: "inicio", label: "Panel principal", icon: LayoutDashboard, roles: ["admin", "vendedor", "produccion", "cliente"] },
+	{ id: "inicio", label: "Panel principal", icon: LayoutDashboard, roles: ["admin"] },
 	{ id: "clientes", label: "Clientes", icon: Users, roles: ["admin", "vendedor"] },
-	{ id: "cotizaciones", label: "Cotizaciones", icon: FileText, roles: ["admin", "vendedor"] },
 	{ id: "pedidos", label: "Pedidos", icon: Package, roles: ["admin", "vendedor", "produccion"] },
 	{ id: "usuarios", label: "Personal", icon: Shield, roles: ["admin"] },
 	{ id: "perfil", label: "Mi cuenta", icon: Settings, roles: ["admin", "vendedor", "produccion", "cliente"] },
@@ -49,11 +47,11 @@ export default function Dashboard() {
 	const { profile, logout } = useAuth();
 	const rol = profile?.rol ?? "vendedor";
 	const items = useMemo(() => NAV.filter((n) => n.roles.includes(rol)), [rol]);
-	const [vista, setVista] = useState<Vista>("inicio");
+	const [vista, setVista] = useState<Vista>(rol === "admin" ? "inicio" : "pedidos");
 
 	useEffect(() => {
-		if (!items.some((i) => i.id === vista)) setVista("inicio");
-	}, [items, vista]);
+		if (!items.some((i) => i.id === vista)) setVista(rol === "admin" ? "inicio" : "pedidos");
+	}, [items, vista, rol]);
 
 	const inicial = (profile?.displayName || profile?.email || "U").charAt(0).toUpperCase();
 
@@ -117,7 +115,6 @@ export default function Dashboard() {
 				<div className="mx-auto max-w-5xl">
 					{vista === "inicio" && <Inicio rol={rol} />}
 					{vista === "clientes" && <ClientesView />}
-					{vista === "cotizaciones" && <CotizacionesView />}
 					{vista === "pedidos" && <PedidosView />}
 					{vista === "usuarios" && <UsuariosView />}
 					{vista === "perfil" && <Perfil />}

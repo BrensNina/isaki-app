@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { actualizarCliente, crearCliente, eliminarCliente, listarClientes } from "@/lib/clientes";
+import { listarUsuarios } from "@/lib/usuarios";
 import { DEPARTAMENTOS, TIPO_CLIENTE_LABEL, TIPO_ENTREGA_LABEL } from "@/lib/catalog";
 import type { Cliente, ClienteInput, TipoCliente, TipoEntrega } from "@/lib/types";
 import { Badge, Button, EmptyState, Field, Input, Modal, Select, Spinner, Textarea } from "./ui";
@@ -29,10 +30,20 @@ export default function ClientesView() {
 	const [editando, setEditando] = useState<Cliente | null>(null);
 	const [creando, setCreando] = useState(false);
 	const [filtro, setFiltro] = useState("");
+	const [vendedores, setVendedores] = useState<Record<string, string>>({});
 
 	async function recargar() {
 		setLoading(true);
-		setClientes(await listarClientes(user!.uid, profile!.rol));
+		const [cli, usu] = await Promise.all([
+			listarClientes(user!.uid, profile!.rol).catch(() => [] as Cliente[]),
+			profile!.rol === "admin" ? listarUsuarios().catch(() => []) : Promise.resolve([]),
+		]);
+		
+		const mapUsu: Record<string, string> = {};
+		for (const u of usu) mapUsu[u.uid] = u.displayName || u.email || "Vendedor Desconocido";
+		setVendedores(mapUsu);
+
+		setClientes(cli);
 		setLoading(false);
 	}
 
@@ -55,6 +66,17 @@ export default function ClientesView() {
 			(c.telefono ?? "").toLowerCase().includes(q)
 		);
 	});
+
+	const agrupados = useMemo(() => {
+		if (profile?.rol !== "admin") return { "Mis Clientes": visibles };
+		const grupos: Record<string, Cliente[]> = {};
+		visibles.forEach((c) => {
+			const nombre = vendedores[c.vendedorUid] || "Vendedor Desconocido";
+			if (!grupos[nombre]) grupos[nombre] = [];
+			grupos[nombre].push(c);
+		});
+		return grupos;
+	}, [visibles, profile, vendedores]);
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -99,41 +121,52 @@ export default function ClientesView() {
 							</tr>
 						</thead>
 						<tbody>
-							{visibles.map((c) => (
-								<tr key={c.id} className="border-b border-border last:border-0 hover:bg-background">
-									<td className="px-4 py-3">
-										<div className="font-medium">{c.razonSocial}</div>
-										<div className="text-xs text-muted">{TIPO_CLIENTE_LABEL[c.tipoCliente]}</div>
-									</td>
-									<td className="px-4 py-3 tabular-nums">{c.dniRuc}</td>
-									<td className="px-4 py-3">
-										<div>{c.telefono || "—"}</div>
-										{c.email && <div className="text-xs text-muted">{c.email}</div>}
-									</td>
-									<td className="px-4 py-3">
-										<Badge className={c.tipoEntrega === "agencia" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}>
-											{c.tipoEntrega === "agencia" ? `Agencia · ${c.departamento || "—"}` : "Local"}
-										</Badge>
-									</td>
-									<td className="px-4 py-3">
-										<div className="flex justify-end gap-1">
-											<button
-												onClick={() => setEditando(c)}
-												className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-primary"
-												title="Editar"
-											>
-												<Pencil className="h-4 w-4" />
-											</button>
-											<button
-												onClick={() => handleEliminar(c)}
-												className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
-												title="Eliminar"
-											>
-												<Trash2 className="h-4 w-4" />
-											</button>
-										</div>
-									</td>
-								</tr>
+							{Object.entries(agrupados).map(([grupo, clis]) => (
+								<Fragment key={grupo}>
+									{profile?.rol === "admin" && (
+										<tr className="bg-slate-50 border-b border-border">
+											<td colSpan={5} className="px-4 py-2 text-xs font-semibold uppercase text-slate-500">
+												Cartera de: {grupo}
+											</td>
+										</tr>
+									)}
+									{clis.map((c) => (
+										<tr key={c.id} className="border-b border-border last:border-0 hover:bg-background">
+											<td className="px-4 py-3">
+												<div className="font-medium">{c.razonSocial}</div>
+												<div className="text-xs text-muted">{TIPO_CLIENTE_LABEL[c.tipoCliente]}</div>
+											</td>
+											<td className="px-4 py-3 tabular-nums">{c.dniRuc}</td>
+											<td className="px-4 py-3">
+												<div>{c.telefono || "—"}</div>
+												{c.email && <div className="text-xs text-muted">{c.email}</div>}
+											</td>
+											<td className="px-4 py-3">
+												<Badge className={c.tipoEntrega === "agencia" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}>
+													{c.tipoEntrega === "agencia" ? `Agencia · ${c.departamento || "—"}` : "Local"}
+												</Badge>
+											</td>
+											<td className="px-4 py-3">
+												<div className="flex justify-end gap-1">
+													<button
+														onClick={() => setEditando(c)}
+														className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-primary"
+														title="Editar"
+													>
+														<Pencil className="h-4 w-4" />
+													</button>
+													<button
+														onClick={() => handleEliminar(c)}
+														className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+														title="Eliminar"
+													>
+														<Trash2 className="h-4 w-4" />
+													</button>
+												</div>
+											</td>
+										</tr>
+									))}
+								</Fragment>
 							))}
 						</tbody>
 					</table>

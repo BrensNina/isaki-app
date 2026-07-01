@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { Plus, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { listarUsuarios, actualizarRolUsuario, crearUsuarioPorAdmin } from "@/lib/usuarios";
-import { ROL_LABEL, ROLES } from "@/lib/types";
+import { listarUsuarios, crearUsuarioPorAdmin, eliminarUsuarioAdmin } from "@/lib/usuarios";
+import { ROL_LABEL } from "@/lib/types";
 import type { UserProfile, Rol } from "@/lib/types";
 import { Badge, Button, EmptyState, Field, Input, Modal, Select, Spinner } from "./ui";
 
@@ -13,7 +13,6 @@ export default function UsuariosView() {
 	const [usuarios, setUsuarios] = useState<UserProfile[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [creando, setCreando] = useState(false);
-	const [busyRoles, setBusyRoles] = useState<Record<string, boolean>>({});
 
 	async function recargar() {
 		setLoading(true);
@@ -30,16 +29,14 @@ export default function UsuariosView() {
 		recargar();
 	}, []);
 
-	async function cambiarRol(uid: string, nuevoRol: Rol) {
-		setBusyRoles((prev) => ({ ...prev, [uid]: true }));
+	async function handleEliminar(uid: string, nombre: string) {
+		if (!confirm(`¿Estás seguro de eliminar el acceso de ${nombre}?`)) return;
 		try {
-			await actualizarRolUsuario(uid, nuevoRol);
-			// Actualizar localmente para no tener que recargar toda la lista
-			setUsuarios((prev) => prev.map((u) => (u.uid === uid ? { ...u, rol: nuevoRol } : u)));
+			await eliminarUsuarioAdmin(uid);
+			await recargar();
 		} catch (err) {
-			alert(err instanceof Error ? err.message : "Error al cambiar rol");
+			alert("Error al eliminar usuario.");
 		}
-		setBusyRoles((prev) => ({ ...prev, [uid]: false }));
 	}
 
 	return (
@@ -66,7 +63,7 @@ export default function UsuariosView() {
 								<th className="px-4 py-3">Nombre</th>
 								<th className="px-4 py-3">Correo</th>
 								<th className="px-4 py-3">Rol actual</th>
-								<th className="px-4 py-3 text-right">Cambiar rol</th>
+								<th className="px-4 py-3 text-right">Acciones</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -78,16 +75,11 @@ export default function UsuariosView() {
 										<Badge>{ROL_LABEL[u.rol]}</Badge>
 									</td>
 									<td className="px-4 py-3 text-right">
-										<Select
-											value={u.rol}
-											disabled={busyRoles[u.uid] || u.uid === user?.uid}
-											onChange={(e) => cambiarRol(u.uid, e.target.value as Rol)}
-											className="h-8 py-1 text-xs inline-block w-auto"
-										>
-											{ROLES.map((r) => (
-												<option key={r} value={r}>{ROL_LABEL[r]}</option>
-											))}
-										</Select>
+										{u.rol === "produccion" && (
+											<Button variant="secondary" onClick={() => handleEliminar(u.uid, u.displayName || "Usuario")}>
+												Eliminar
+											</Button>
+										)}
 									</td>
 								</tr>
 							))}
@@ -115,7 +107,6 @@ function UsuarioForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [nombre, setNombre] = useState("");
-	const [rol, setRol] = useState<Rol>("vendedor");
 	
 	const [error, setError] = useState("");
 	const [busy, setBusy] = useState(false);
@@ -132,7 +123,7 @@ function UsuarioForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
 
 		setBusy(true);
 		try {
-			await crearUsuarioPorAdmin(email, password, nombre, rol);
+			await crearUsuarioPorAdmin(email, password, nombre, "produccion");
 			onSaved();
 		} catch (err: any) {
 			// Traducir algunos errores comunes de Firebase
@@ -159,13 +150,6 @@ function UsuarioForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
 				</Field>
 				<Field label="Contraseña temporal">
 					<Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 6 caracteres" />
-				</Field>
-				<Field label="Rol de acceso">
-					<Select value={rol} onChange={(e) => setRol(e.target.value as Rol)}>
-						{ROLES.map((r) => (
-							<option key={r} value={r}>{ROL_LABEL[r]}</option>
-						))}
-					</Select>
 				</Field>
 
 				{error && !error.includes("campos") && (

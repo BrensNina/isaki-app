@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, updateDoc, setDoc, query, orderBy } from "firebase/firestore";
+import { collection, doc, getDocs, updateDoc, setDoc, query, orderBy, deleteDoc } from "firebase/firestore";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { getDb, getSecondaryAuth } from "./firebase";
 import type { UserProfile, Rol } from "./types";
@@ -14,6 +14,11 @@ export async function actualizarRolUsuario(uid: string, nuevoRol: Rol): Promise<
 	const db = getDb();
 	const ref = doc(db, "users", uid);
 	await updateDoc(ref, { rol: nuevoRol });
+}
+
+export async function eliminarUsuarioAdmin(uid: string): Promise<void> {
+	const db = getDb();
+	await deleteDoc(doc(db, "users", uid));
 }
 
 /**
