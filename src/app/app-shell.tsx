@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import Dashboard from "@/components/dashboard";
 import { Button, Field, Input } from "@/components/ui";
+import Image from "next/image";
 
 // This whole subtree is loaded client-only (see page.tsx). Firebase's SDK runs
 // `new Function` at module-eval time, which the Cloudflare Workers runtime
@@ -17,11 +19,11 @@ export default function AppShell() {
 }
 
 function Root() {
-	const { user, loading } = useAuth();
+	const { user, profile, loading } = useAuth();
 
-	if (loading) {
+	if (loading || (user && !profile)) {
 		return (
-			<main className="grid min-h-screen place-items-center text-sm text-muted">Cargando…</main>
+			<main className="grid min-h-screen place-items-center text-sm text-[#64748b]">Cargando perfil…</main>
 		);
 	}
 
@@ -32,27 +34,35 @@ function Root() {
 
 function AuthScreen() {
 	return (
-		<main className="grid min-h-screen lg:grid-cols-2">
-			{/* Panel de marca */}
-			<section className="hidden flex-col justify-between bg-primary p-12 text-primary-foreground lg:flex">
-				<div className="flex items-center gap-2.5">
-					<div className="grid h-9 w-9 place-items-center rounded-lg bg-white/15 text-sm font-bold">IP</div>
-					<span className="font-semibold">ISAKI.PERU</span>
-				</div>
-				<div>
-					<h2 className="text-3xl font-semibold leading-tight">Gestión de pedidos mayoristas B2B</h2>
-					<p className="mt-3 max-w-md text-primary-foreground/80">
-						Centraliza clientes, pedidos, producción y entregas en una sola plataforma. Menos errores
-						manuales, más visibilidad en tiempo real.
-					</p>
-				</div>
-				<p className="text-sm text-primary-foreground/60">ISAKI.PERU · MAYTA SPORT</p>
-			</section>
+		<main className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-[#99ffff] via-[#f8fafc] to-[#fbb9ce] p-6">
+			<div className="flex w-full max-w-6xl flex-col items-center justify-between gap-12 lg:flex-row lg:gap-16">
+				{/* Panel Izquierdo (Texto y Logo) */}
+				<section className="hidden w-full flex-col lg:flex lg:w-1/2">
+					<div className="mx-auto w-full max-w-[500px]">
+						<div className="relative mb-12 h-32 w-64">
+							<Image 
+								src="/logo.png" 
+								alt="Isaki Logo" 
+								fill 
+								className="object-contain object-left" 
+							/>
+						</div>
+						<h2 className="text-[3.75rem] font-bold leading-[1.1] tracking-tight text-[#1e293b]">
+							Tus pedidos<br />siempre bajo control
+						</h2>
+						<p className="mt-6 text-[1.25rem] font-medium leading-relaxed text-[#475569]">
+							Consulta avances, revisa su historial y recibe información actualizada en tiempo real.
+						</p>
+					</div>
+				</section>
 
-			{/* Formulario */}
-			<section className="flex items-center justify-center p-6">
-				<AuthForm />
-			</section>
+				{/* Panel Derecho (Burbuja Login) */}
+				<section className="flex w-full justify-center lg:w-1/2">
+					<div className="w-full max-w-[460px] rounded-[2.5rem] bg-surface p-10 sm:p-14 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-white/60">
+						<AuthForm />
+					</div>
+				</section>
+			</div>
 		</main>
 	);
 }
@@ -81,52 +91,84 @@ function AuthForm() {
 	}
 
 	return (
-		<div className="w-full max-w-sm">
-			<div className="mb-6 flex items-center gap-2.5 lg:hidden">
-				<div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">IP</div>
-				<span className="font-semibold">ISAKI.PERU</span>
+		<div className="w-full">
+			<div className="mb-10 flex justify-center lg:hidden">
+				<div className="relative h-24 w-56">
+					<Image 
+						src="/logo.png" 
+						alt="Isaki Logo" 
+						fill 
+						className="object-contain" 
+					/>
+				</div>
 			</div>
 
-			<h1 className="text-2xl font-semibold tracking-tight">
+			<h1 className="text-[2rem] font-bold tracking-tight text-[#1e293b]">
 				{mode === "signin" ? "Iniciar sesión" : "Crear cuenta"}
 			</h1>
-			<p className="mt-1 text-sm text-muted">
+			<p className="mt-2 text-[15px] font-medium text-[#64748b]">
 				{mode === "signin" ? "Accede a tu panel de gestión." : "Registra una cuenta para empezar."}
 			</p>
 
-			<form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+			<form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-6">
 				{mode === "signup" && (
 					<Field label="Nombre">
-						<Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required placeholder="Tu nombre" />
+						<Input 
+							value={displayName} 
+							onChange={(e) => setDisplayName(e.target.value)} 
+							required 
+							placeholder="Tu nombre" 
+							className="h-[3.25rem] rounded-xl border-0 bg-[#f1f5f9] px-4 text-[15px] font-medium text-[#1e293b] placeholder:text-[#94a3b8]"
+						/>
 					</Field>
 				)}
 				<Field label="Correo">
-					<Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="tu@correo.com" />
+					<Input
+						type="email"
+						value={email}
+						onChange={(e) => setEmail(e.target.value)}
+						placeholder="ejemplo@correo.com"
+						required
+						className="h-[3.25rem] rounded-xl border-0 bg-[#f1f5f9] px-4 text-[15px] font-medium text-[#1e293b] placeholder:text-[#94a3b8]"
+					/>
 				</Field>
 				<Field label="Contraseña">
-					<Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="••••••••" />
+					<Input
+						type="password"
+						value={password}
+						onChange={(e) => setPassword(e.target.value)}
+						placeholder="••••••••"
+						required
+						className="h-[3.25rem] rounded-xl border-0 bg-[#f1f5f9] px-4 text-[15px] font-medium text-[#1e293b] placeholder:text-[#94a3b8]"
+					/>
 				</Field>
+				
+				{error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
-				{error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
-
-				<Button type="submit" disabled={busy} className="h-11 w-full">
+				<Button 
+					type="submit" 
+					disabled={busy} 
+					className="mt-2 h-[3.25rem] w-full rounded-xl border-0 bg-[#99ffff] text-[16px] font-bold text-[#1e293b] shadow-sm hover:bg-[#7ceeee]"
+				>
 					{busy ? "Procesando…" : mode === "signin" ? "Entrar" : "Registrarme"}
 				</Button>
 			</form>
 
-			<button
+			<div className="mt-10 text-center">
+				<button
 				onClick={() => {
 					setMode(mode === "signin" ? "signup" : "signin");
 					setError(null);
 				}}
-				className="mt-5 text-sm text-muted hover:text-foreground"
+				className="text-[14px] font-medium text-[#64748b] hover:text-[#1e293b]"
 			>
 				{mode === "signin" ? (
-					<>¿No tienes cuenta? <span className="font-medium text-primary">Regístrate</span></>
+					<>¿No tienes cuenta? <span className="font-semibold text-[#1e293b]">Regístrate</span></>
 				) : (
-					<>¿Ya tienes cuenta? <span className="font-medium text-primary">Inicia sesión</span></>
+					<>¿Ya tienes cuenta? <span className="font-semibold text-[#1e293b]">Inicia sesión</span></>
 				)}
 			</button>
+			</div>
 		</div>
 	);
 }

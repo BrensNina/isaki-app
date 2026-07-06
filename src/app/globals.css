@@ -1,25 +1,25 @@
 @import "tailwindcss";
 
-/* Force a light, consistent theme. The previous prefers-color-scheme:dark made
-   native controls (e.g. <select> dropdowns) render unreadable. A business
-   dashboard reads better on a clean light surface anyway. */
-:root {
-	color-scheme: light;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme {
-	--color-background: #f5f6f8; /* app canvas */
-	--color-surface: #ffffff; /* cards, panels, inputs */
+	--color-background: #fdfdfd;
+	--color-surface: #ffffff;
 	--color-border: #e6e8ec;
-	--color-foreground: #0f1729; /* primary text */
-	--color-muted: #64748b; /* secondary text */
-	--color-primary: #4f46e5; /* brand: indigo */
-	--color-primary-hover: #4338ca;
-	--color-primary-soft: #eef2ff; /* tinted surfaces */
-	--color-primary-foreground: #ffffff;
+	--color-foreground: #111827;
+	--color-muted: #64748b;
+	--color-primary: #99ffff; /* celeste bebe */
+	--color-primary-hover: #66eeee; 
+	--color-primary-soft: #e0ffff; 
+	--color-primary-foreground: #111827;
+	--color-secondary: #fbb9ce; /* rosado bb */
 
 	--font-sans: var(--font-geist-sans);
 	--font-mono: var(--font-geist-mono);
+}
+
+:root {
+	color-scheme: light;
 }
 
 body {

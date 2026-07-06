@@ -66,10 +66,19 @@ async function ensureProfile(user: User): Promise<UserProfile> {
 
 	const data = snap.data() as UserProfile;
 
-	// Migración suave: cuentas creadas antes de existir el campo `rol`.
-	if (!data.rol) {
-		await updateDoc(ref, { rol: ROL_POR_DEFECTO, updatedAt: serverTimestamp() });
-		data.rol = ROL_POR_DEFECTO;
+	// Migración suave: asegurar que todos los campos requeridos por las reglas existan.
+	let needsUpdate = false;
+	const updatePayload: any = { updatedAt: serverTimestamp() };
+
+	if (!data.rol) { updatePayload.rol = ROL_POR_DEFECTO; data.rol = ROL_POR_DEFECTO; needsUpdate = true; }
+	if (data.bio === undefined) { updatePayload.bio = ""; data.bio = ""; needsUpdate = true; }
+	if (!data.createdAt) { updatePayload.createdAt = serverTimestamp(); data.createdAt = serverTimestamp() as any; needsUpdate = true; }
+	if (data.photoURL === undefined) { updatePayload.photoURL = null; data.photoURL = null; needsUpdate = true; }
+	if (data.displayName === undefined) { updatePayload.displayName = null; data.displayName = null; needsUpdate = true; }
+	if (data.email === undefined) { updatePayload.email = null; data.email = null; needsUpdate = true; }
+
+	if (needsUpdate) {
+		await setDoc(ref, updatePayload, { merge: true });
 	}
 
 	return data;
@@ -82,8 +91,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 	useEffect(() => {
 		const unsub = onAuthStateChanged(getFirebaseAuth(), async (u) => {
+			if (u) {
+				try {
+					const p = await ensureProfile(u);
+					setProfile(p);
+				} catch (err) {
+					console.error("Error cargando perfil:", err);
+					setProfile(null);
+				}
+			} else {
+				setProfile(null);
+			}
 			setUser(u);
-			setProfile(u ? await ensureProfile(u) : null);
 			setLoading(false);
 		});
 		return unsub;
