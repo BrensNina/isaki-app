@@ -1,91 +1,88 @@
-// Genera un "PDF" de la cotización sin dependencias: abre una ventana con el
-// documento maquetado y dispara la impresión del navegador, donde el usuario
-// elige "Guardar como PDF". Así se obtiene un archivo listo para enviar al
-// cliente sin agregar ninguna librería de PDF.
+// Genera y descarga un PDF real de la cotización con jsPDF (client-side). Se usa
+// solo en el navegador (la vista de cotizaciones es un componente cliente bajo el
+// subárbol ssr:false), así que no corre en el runtime de Workers.
 
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import type { Cotizacion } from "./types";
 
 const soles = (n: number) => `S/ ${(n || 0).toFixed(2)}`;
 
-// Escapa texto de campos libres para no romper el HTML del documento.
-function esc(s: string | undefined): string {
-	return (s ?? "").replace(/[&<>"']/g, (c) =>
-		({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!),
-	);
-}
-
 export function descargarCotizacionPDF(cot: Cotizacion): void {
 	const ref = cot.id.slice(0, 6).toUpperCase();
-	const filas = cot.items
-		.map(
-			(it) => `<tr>
-				<td>${esc(it.producto)}</td>
-				<td>${esc(it.talla)}</td>
-				<td>${esc(it.color)}</td>
-				<td class="num">${it.cantidad}</td>
-				<td class="num">${soles(it.precioUnitario)}</td>
-				<td class="num">${soles(it.subtotal)}</td>
-			</tr>`,
-		)
-		.join("");
+	const doc = new jsPDF();
+	const M = 14; // margen izquierdo
+	const anchoPag = doc.internal.pageSize.getWidth();
 
-	const html = `<!doctype html>
-<html lang="es"><head><meta charset="utf-8">
-<title>Cotizacion-${ref}</title>
-<style>
-	* { box-sizing: border-box; }
-	body { font-family: system-ui, -apple-system, Arial, sans-serif; color: #111827; margin: 32px; }
-	h1 { font-size: 22px; margin: 0; }
-	.muted { color: #6b7280; }
-	.head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #111827; padding-bottom: 12px; margin-bottom: 20px; }
-	.ref { text-align: right; font-size: 13px; }
-	.ref strong { font-size: 16px; }
-	table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
-	th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; }
-	th { background: #f3f4f6; text-transform: uppercase; font-size: 11px; letter-spacing: .04em; }
-	.num { text-align: right; font-variant-numeric: tabular-nums; }
-	.total { display: flex; justify-content: flex-end; gap: 24px; margin-top: 16px; font-size: 16px; font-weight: 600; }
-	.cond { margin-top: 20px; font-size: 13px; }
-	.cond .muted { display: block; margin-bottom: 4px; }
-	footer { margin-top: 40px; font-size: 11px; color: #9ca3af; text-align: center; }
-	@media print { body { margin: 0; } }
-</style></head>
-<body>
-	<div class="head">
-		<div>
-			<h1>Cotización</h1>
-			<p class="muted">ISAKI.PERU · MAYTA SPORT</p>
-		</div>
-		<div class="ref">
-			<div><strong>${ref}</strong></div>
-			<div class="muted">Emitida: ${esc(cot.fechaEmision) || "—"}</div>
-			<div class="muted">Válida hasta: ${esc(cot.fechaValidez) || "—"}</div>
-		</div>
-	</div>
+	// --- Encabezado ---
+	doc.setFont("helvetica", "bold").setFontSize(20).setTextColor(17, 24, 39);
+	doc.text("Cotización", M, 20);
+	doc.setFont("helvetica", "normal").setFontSize(10).setTextColor(107, 114, 128);
+	doc.text("ISAKI.PERU · MAYTA SPORT", M, 27);
 
-	<p><strong>Cliente:</strong> ${esc(cot.clienteNombre)}</p>
+	doc.setFontSize(10).setTextColor(17, 24, 39);
+	doc.text(ref, anchoPag - M, 18, { align: "right" });
+	doc.setTextColor(107, 114, 128);
+	doc.text(`Emitida: ${cot.fechaEmision || "—"}`, anchoPag - M, 24, { align: "right" });
+	doc.text(`Válida hasta: ${cot.fechaValidez || "—"}`, anchoPag - M, 29, { align: "right" });
 
-	<table>
-		<thead><tr>
-			<th>Producto</th><th>Talla</th><th>Color</th>
-			<th class="num">Cant.</th><th class="num">P. unit.</th><th class="num">Subtotal</th>
-		</tr></thead>
-		<tbody>${filas}</tbody>
-	</table>
+	doc.setDrawColor(17, 24, 39).setLineWidth(0.5).line(M, 33, anchoPag - M, 33);
 
-	<div class="total"><span>Total cotizado</span><span>${soles(cot.montoTotal)}</span></div>
+	// --- Cliente ---
+	doc.setFontSize(11).setTextColor(17, 24, 39);
+	doc.setFont("helvetica", "bold").text("Cliente: ", M, 42);
+	const wLabel = doc.getTextWidth("Cliente: ");
+	doc.setFont("helvetica", "normal").text(cot.clienteNombre || "—", M + wLabel, 42);
 
-	${cot.notasCondiciones ? `<div class="cond"><span class="muted">Condiciones</span>${esc(cot.notasCondiciones)}</div>` : ""}
+	// --- Tabla de ítems ---
+	autoTable(doc, {
+		startY: 48,
+		head: [["Producto", "Talla", "Color", "Cant.", "P. unit.", "Subtotal"]],
+		body: cot.items.map((it) => [
+			it.producto,
+			it.talla,
+			it.color,
+			String(it.cantidad),
+			soles(it.precioUnitario),
+			soles(it.subtotal),
+		]),
+		theme: "striped",
+		headStyles: { fillColor: [243, 244, 246], textColor: [17, 24, 39], fontStyle: "bold" },
+		styles: { fontSize: 9, cellPadding: 2.5 },
+		columnStyles: {
+			3: { halign: "right" },
+			4: { halign: "right" },
+			5: { halign: "right" },
+		},
+		margin: { left: M, right: M },
+	});
 
-	<footer>Documento generado por isaki-app · Cotización ${ref}</footer>
-	<script>window.onload = function () { window.print(); };</script>
-</body></html>`;
+	// finalY: dónde terminó la tabla.
+	let y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
 
-	const w = window.open("", "_blank");
-	if (!w) {
-		alert("Permite las ventanas emergentes para generar el PDF.");
-		return;
+	// --- Total ---
+	doc.setFont("helvetica", "bold").setFontSize(12).setTextColor(17, 24, 39);
+	doc.text("Total cotizado", anchoPag - M - 40, y, { align: "right" });
+	doc.text(soles(cot.montoTotal), anchoPag - M, y, { align: "right" });
+
+	// --- Condiciones ---
+	if (cot.notasCondiciones) {
+		y += 12;
+		doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(107, 114, 128);
+		doc.text("Condiciones", M, y);
+		doc.setTextColor(17, 24, 39);
+		const lineas = doc.splitTextToSize(cot.notasCondiciones, anchoPag - 2 * M);
+		doc.text(lineas, M, y + 5);
 	}
-	w.document.write(html);
-	w.document.close();
+
+	// --- Pie ---
+	doc.setFontSize(8).setTextColor(156, 163, 175);
+	doc.text(
+		`Documento generado por isaki-app · Cotización ${ref}`,
+		anchoPag / 2,
+		doc.internal.pageSize.getHeight() - 10,
+		{ align: "center" },
+	);
+
+	doc.save(`Cotizacion-${ref}.pdf`);
 }
