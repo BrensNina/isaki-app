@@ -5,8 +5,6 @@ import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import {
 	Activity,
 	Bell,
-	CheckCircle2,
-	Factory,
 	FileText,
 	LayoutDashboard,
 	LogOut,
@@ -16,7 +14,6 @@ import {
 	Shield,
 	User,
 	Users,
-	Wallet,
 	type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -222,10 +219,10 @@ function Inicio({ rol }: { rol: Rol }) {
 			</header>
 
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				<Kpi etiqueta="Total de pedidos" valor={String(kpis.total)} icon={Package} />
-				<Kpi etiqueta="En producción" valor={String(kpis.produccion)} icon={Factory} />
-				<Kpi etiqueta="Entregados" valor={String(kpis.entregados)} icon={CheckCircle2} />
-				<Kpi etiqueta="Saldo por cobrar" valor={money(kpis.porCobrar)} icon={Wallet} />
+				<Kpi etiqueta="Total de pedidos" valor={String(kpis.total)} />
+				<Kpi etiqueta="En producción" valor={String(kpis.produccion)} />
+				<Kpi etiqueta="Entregados" valor={String(kpis.entregados)} />
+				<Kpi etiqueta="Saldo por cobrar" valor={money(kpis.porCobrar)} />
 			</div>
 
 			<Card>
@@ -241,17 +238,12 @@ function Inicio({ rol }: { rol: Rol }) {
 	);
 }
 
-function Kpi({ etiqueta, valor, icon: Icon }: { etiqueta: string; valor: string; icon: LucideIcon }) {
+function Kpi({ etiqueta, valor }: { etiqueta: string; valor: string }) {
 	return (
-		<Card className="flex items-center justify-between p-5">
-			<div className="min-w-0">
-				<p className="truncate text-sm text-muted">{etiqueta}</p>
-				<p className="mt-1 text-2xl font-semibold tracking-tight">{valor}</p>
-			</div>
-			<div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary">
-				<Icon className="h-5 w-5" strokeWidth={2} />
-			</div>
-		</Card>
+		<div className="rounded-2xl bg-primary-soft p-5 text-center shadow-sm">
+			<p className="text-sm text-muted">{etiqueta}</p>
+			<p className="mt-2 text-2xl font-bold tracking-tight text-[#0f172a]">{valor}</p>
+		</div>
 	);
 }
 
