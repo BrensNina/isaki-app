@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Search, Trash2, Users } from "lucide-react";
+import { Pencil, Plus, Search, Send, Trash2, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { actualizarCliente, crearCliente, eliminarCliente, listarClientes } from "@/lib/clientes";
 import { listarUsuarios } from "@/lib/usuarios";
@@ -55,6 +55,23 @@ export default function ClientesView() {
 		if (!confirm(`¿Eliminar al cliente "${c.razonSocial}"? Esta acción no se puede deshacer.`)) return;
 		await eliminarCliente(c.id);
 		await recargar();
+	}
+
+	// Copia el enlace de vinculación de Telegram para ENVIÁRSELO al cliente (no
+	// abrirlo aquí: quien da Start queda vinculado, y debe ser el cliente).
+	async function vincularTelegram(c: Cliente) {
+		const bot = process.env.NEXT_PUBLIC_TELEGRAM_BOT;
+		if (!bot) {
+			alert("Falta configurar NEXT_PUBLIC_TELEGRAM_BOT (usuario del bot).");
+			return;
+		}
+		const enlace = `https://t.me/${bot}?start=${c.id}`;
+		try {
+			await navigator.clipboard.writeText(enlace);
+			alert(`Enlace copiado. Envíaselo a ${c.razonSocial} para que reciba avisos de sus pedidos por Telegram:\n\n${enlace}`);
+		} catch {
+			prompt("Copia este enlace y envíaselo al cliente:", enlace);
+		}
 	}
 
 	const visibles = clientes.filter((c) => {
@@ -148,6 +165,13 @@ export default function ClientesView() {
 											</td>
 											<td className="px-4 py-3">
 												<div className="flex justify-end gap-1">
+													<button
+														onClick={() => vincularTelegram(c)}
+														className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-primary"
+														title="Copiar enlace de Telegram para el cliente"
+													>
+														<Send className="h-4 w-4" />
+													</button>
 													<button
 														onClick={() => setEditando(c)}
 														className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-primary"

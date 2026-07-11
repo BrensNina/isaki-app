@@ -39,6 +39,13 @@
 			"bucket_name": "isaki-adjuntos"
 		}
 	],
+	"kv_namespaces": [
+		{
+			// Vínculo cliente ↔ chat de Telegram (cliente:<id> = chatId).
+			"binding": "TELEGRAM_KV",
+			"id": "dd38c7fbaee9427da77dc60b23fad5c6"
+		}
+	],
 	"observability": {
 		"enabled": true
 	},

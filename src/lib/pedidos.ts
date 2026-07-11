@@ -17,11 +17,32 @@ import {
 	where,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
-import { notifyTelegram, soles } from "./notify";
-import { getEstadoMeta } from "./types";
+import { notifyCliente } from "./notify";
 import type { EstadoPedido, HistorialEntry, ItemPedido, Pedido, PedidoInput } from "./types";
 
 const COL = "pedidos";
+
+// Mensajes que se le envían AL CLIENTE por Telegram según el estado. Los estados
+// internos (esperando_cotizacion, cotizado, pendiente_produccion) no notifican
+// al cliente (no aparecen en el mapa).
+const MENSAJE_CLIENTE: Partial<Record<EstadoPedido, string>> = {
+	en_produccion: "🧵 ¡Tu pedido entró a producción!",
+	control_calidad: "🔍 Tu pedido pasó a control de calidad.",
+	listo_entrega: "📦 ¡Tu pedido está listo para entrega!",
+	entregado: "✅ Tu pedido fue entregado. ¡Gracias por tu compra!",
+	cancelado: "❌ Tu pedido fue cancelado. Escríbenos si tienes dudas.",
+};
+
+/** Notifica al cliente del pedido (best-effort). Lee el clienteId del doc. */
+async function avisarCliente(pedidoId: string, mensaje: string): Promise<void> {
+	try {
+		const snap = await getDoc(doc(getDb(), COL, pedidoId));
+		const clienteId = (snap.data() as Pedido | undefined)?.clienteId;
+		if (clienteId) void notifyCliente(clienteId, mensaje);
+	} catch {
+		// best-effort: no bloquea la operación principal.
+	}
+}
 
 /** Recalcula subtotales de cada línea y el monto total del pedido. */
 export function calcularTotales(items: ItemPedido[]): { items: ItemPedido[]; montoTotal: number } {
@@ -92,8 +113,7 @@ export async function crearPedido(data: PedidoInput, vendedorUid: string): Promi
 	};
 
 	const ref = await addDoc(collection(getDb(), COL), nuevo);
-	const unidades = items.reduce((a, it) => a + it.cantidad, 0);
-	void notifyTelegram(`🆕 Nuevo pedido de <b>${data.clienteNombre}</b> — ${soles(montoTotal)} (${unidades} und)`);
+	void notifyCliente(data.clienteId, "🆕 Tu pedido fue registrado. Te avisaremos por aquí de cada avance.");
 	return ref.id;
 }
 
@@ -123,7 +143,7 @@ export async function aprobarPedidoAProduccion(id: string): Promise<void> {
 		historial: arrayUnion(entrada("pendiente_produccion", "Pedido aprobado y anticipo confirmado por el vendedor. Pasa a producción.")),
 		updatedAt: serverTimestamp(),
 	});
-	void notifyTelegram("✅ Pedido aprobado y anticipo confirmado. Pasa a la cola de producción.");
+	// Paso interno (cola de producción): no se notifica al cliente todavía.
 }
 
 /** Agrega un reporte de avance sin cambiar de estado (se asume que está en producción) */
@@ -132,7 +152,7 @@ export async function reportarProgreso(id: string, nota: string): Promise<void> 
 		historial: arrayUnion(entrada("en_produccion", nota)),
 		updatedAt: serverTimestamp(),
 	});
-	void notifyTelegram(`🛠️ Avance de producción: ${nota}`);
+	void avisarCliente(id, `🧵 Avance de tu pedido: ${nota}`);
 }
 
 /** Cambia el estado del pedido y deja registro en el historial (trazabilidad — RF-21). */
@@ -142,7 +162,8 @@ export async function cambiarEstado(id: string, estado: EstadoPedido, nota?: str
 		historial: arrayUnion(entrada(estado, nota)),
 		updatedAt: serverTimestamp(),
 	});
-	void notifyTelegram(`🔔 ${getEstadoMeta(estado).label}${nota ? ` — ${nota}` : ""}`);
+	const mensaje = MENSAJE_CLIENTE[estado];
+	if (mensaje) void avisarCliente(id, mensaje);
 }
 
 /** Crea una entrada de historial fechada en el momento del cambio. */

@@ -1,14 +1,15 @@
-// Notificaciones salientes a Telegram. El token del bot vive en el servidor
-// (Worker), así que el cliente solo hace POST a /api/telegram con el texto ya
-// formateado. Es best-effort: si falla o el bot no está configurado, no rompe
-// la acción que la disparó.
+// Notificaciones salientes a Telegram, dirigidas a cada cliente. El token del
+// bot y el mapa cliente→chat viven en el servidor (Worker); el cliente del
+// navegador solo hace POST con el `clienteId` y el texto ya formateado. Es
+// best-effort: si el cliente no vinculó su Telegram o el bot no está
+// configurado, no pasa nada.
 
-export async function notifyTelegram(text: string): Promise<void> {
+export async function notifyCliente(clienteId: string, text: string): Promise<void> {
 	try {
 		await fetch("/api/telegram", {
 			method: "POST",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ text }),
+			body: JSON.stringify({ clienteId, text }),
 		});
 	} catch {
 		// best-effort: una notificación perdida no debe afectar al usuario.

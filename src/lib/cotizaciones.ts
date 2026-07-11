@@ -16,8 +16,6 @@ import {
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import { calcularTotales, crearPedido } from "./pedidos";
-import { notifyTelegram, soles } from "./notify";
-import { ESTADOS_COTIZACION } from "./types";
 import type { Cotizacion, CotizacionInput, EstadoCotizacion } from "./types";
 
 const COL = "cotizaciones";
@@ -52,7 +50,6 @@ export async function crearCotizacion(data: CotizacionInput, vendedorUid: string
 		updatedAt: serverTimestamp(),
 	};
 	const ref = await addDoc(collection(getDb(), COL), nueva);
-	void notifyTelegram(`🧾 Nueva cotización para <b>${data.clienteNombre}</b> — ${soles(montoTotal)}`);
 	return ref.id;
 }
 
@@ -71,7 +68,6 @@ export async function actualizarCotizacion(id: string, data: CotizacionInput): P
 
 export async function cambiarEstadoCotizacion(id: string, estado: EstadoCotizacion): Promise<void> {
 	await updateDoc(doc(getDb(), COL, id), { estado, updatedAt: serverTimestamp() });
-	void notifyTelegram(`🧾 Cotización → ${ESTADOS_COTIZACION[estado].label}`);
 }
 
 export async function eliminarCotizacion(id: string): Promise<void> {
@@ -95,6 +91,6 @@ export async function convertirAPedido(cot: Cotizacion): Promise<string> {
 		pedidoGeneradoId: pedidoId,
 		updatedAt: serverTimestamp(),
 	});
-	void notifyTelegram(`✅ Cotización de <b>${cot.clienteNombre}</b> aprobada → pedido generado (${soles(cot.montoTotal)})`);
+	// El cliente recibe el aviso de "pedido registrado" que dispara crearPedido.
 	return pedidoId;
 }

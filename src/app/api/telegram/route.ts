@@ -1,32 +1,27 @@
-// Proxy saliente a la API de Telegram. Mantiene el token del bot en el servidor
-// (Worker) para no exponerlo al cliente. No importa Firebase: solo hace `fetch`,
-// así que es seguro ejecutarlo en el runtime de Workers (SSR).
-//
-// ponytail: endpoint sin autenticación; cualquiera que conozca la URL puede
-// enviar un mensaje al chat configurado. Aceptable para un prototipo interno.
-// Si importa, verificar el ID token de Firebase o un secreto compartido.
+// Envío saliente a un cliente por Telegram. Mantiene el token del bot en el
+// servidor (Worker) y resuelve el chat del cliente desde KV (cliente:<id>).
+// Solo hace `fetch` + KV: seguro en el runtime de Workers (no importa Firebase).
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export async function POST(req: Request): Promise<Response> {
-	const body = (await req.json().catch(() => null)) as { text?: string } | null;
+	const body = (await req.json().catch(() => null)) as { text?: string; clienteId?: string } | null;
 	const text = body?.text?.trim();
 	if (!text) return Response.json({ ok: false, error: "texto vacío" }, { status: 400 });
 
-	let token: string | undefined;
-	let chatId: string | undefined;
-	try {
-		const env = getCloudflareContext().env as unknown as Record<string, string | undefined>;
-		token = env.TELEGRAM_BOT_TOKEN;
-		chatId = env.TELEGRAM_CHAT_ID;
-	} catch {
-		// Fuera del contexto de Cloudflare (algunos entornos de dev): usa process.env.
-	}
-	token ??= process.env.TELEGRAM_BOT_TOKEN;
-	chatId ??= process.env.TELEGRAM_CHAT_ID;
+	const { env } = getCloudflareContext();
+	const token = env.TELEGRAM_BOT_TOKEN ?? process.env.TELEGRAM_BOT_TOKEN;
+	if (!token) return Response.json({ ok: false, skipped: "telegram no configurado" });
 
-	// Sin configurar → no-op silencioso, para que la app funcione sin el bot.
-	if (!token || !chatId) return Response.json({ ok: false, skipped: "telegram no configurado" });
+	// Con clienteId → busca su chat vinculado. Sin él → chat interno (fallback).
+	let chatId: string | undefined;
+	if (body?.clienteId) {
+		chatId = (await env.TELEGRAM_KV.get(`cliente:${body.clienteId}`)) ?? undefined;
+		if (!chatId) return Response.json({ ok: false, skipped: "cliente no vinculado" });
+	} else {
+		chatId = env.TELEGRAM_CHAT_ID ?? process.env.TELEGRAM_CHAT_ID;
+		if (!chatId) return Response.json({ ok: false, skipped: "sin destino" });
+	}
 
 	const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
 		method: "POST",

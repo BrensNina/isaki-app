@@ -2,12 +2,15 @@
 # `npm run preview`). Copia este archivo a `.dev.vars` (gitignored) y completa
 # los valores. En producción se cargan como secretos del Worker:
 #   npx wrangler secret put TELEGRAM_BOT_TOKEN
-#   npx wrangler secret put TELEGRAM_CHAT_ID
+#   npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
 
-# Telegram — notificaciones salientes.
-# 1) Crea un bot con @BotFather y copia el token.
-# 2) Obtén el chat id: envíale un mensaje al bot y abre
-#    https://api.telegram.org/bot<TOKEN>/getUpdates para leer chat.id
-#    (para un grupo, el id suele ser negativo).
+# Telegram — token del bot (de @BotFather).
 TELEGRAM_BOT_TOKEN=
+
+# Secreto para validar el webhook entrante de Telegram. Inventa una cadena
+# larga y la MISMA se registra en setWebhook (secret_token).
+TELEGRAM_WEBHOOK_SECRET=
+
+# Opcional: chat interno del equipo. Solo se usa como destino cuando un aviso
+# no está asociado a un cliente. Para las notificaciones a clientes no hace falta.
 TELEGRAM_CHAT_ID=
