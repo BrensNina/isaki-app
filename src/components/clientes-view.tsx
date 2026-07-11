@@ -60,11 +60,8 @@ export default function ClientesView() {
 	// Copia el enlace de vinculación de Telegram para ENVIÁRSELO al cliente (no
 	// abrirlo aquí: quien da Start queda vinculado, y debe ser el cliente).
 	async function vincularTelegram(c: Cliente) {
-		const bot = process.env.NEXT_PUBLIC_TELEGRAM_BOT;
-		if (!bot) {
-			alert("Falta configurar NEXT_PUBLIC_TELEGRAM_BOT (usuario del bot).");
-			return;
-		}
+		// Usuario del bot (público y fijo). Se puede sobrescribir con la env var.
+		const bot = process.env.NEXT_PUBLIC_TELEGRAM_BOT || "isaki_pe_bot";
 		const enlace = `https://t.me/${bot}?start=${c.id}`;
 		try {
 			await navigator.clipboard.writeText(enlace);
