@@ -308,7 +308,7 @@ function CotizacionForm({
 
 				<div className="flex items-center justify-between rounded-xl bg-primary-soft px-4 py-3">
 					<span className="text-sm text-muted">Total cotizado</span>
-					<span className="text-lg font-semibold text-primary">{money(montoTotal)}</span>
+					<span className="text-lg font-semibold text-foreground">{money(montoTotal)}</span>
 				</div>
 
 				{errors._ && <p className="text-sm text-red-600">{errors._}</p>}
@@ -400,7 +400,7 @@ function CotizacionDetalle({
 
 				<div className="flex items-center justify-between rounded-xl bg-primary-soft px-4 py-3">
 					<span className="text-sm text-muted">Total cotizado</span>
-					<span className="text-lg font-semibold text-primary">{money(cot.montoTotal)}</span>
+					<span className="text-lg font-semibold text-foreground">{money(cot.montoTotal)}</span>
 				</div>
 
 				{cot.notasCondiciones && (

@@ -208,7 +208,7 @@ function Inicio({ rol }: { rol: Rol }) {
 			});
 			setLoading(false);
 		})();
-	}, []);
+	}, [user, profile]);
 
 	if (loading) return <Spinner />;
 

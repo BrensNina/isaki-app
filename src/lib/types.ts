@@ -112,11 +112,11 @@ export interface ItemPedido {
 	subtotal: number; // cantidad * precioUnitario (se recalcula al guardar)
 }
 
-/** Documento adjunto a un pedido (guardado en Firebase Storage). */
+/** Documento adjunto a un pedido (guardado en Cloudflare R2). */
 export interface Adjunto {
 	nombre: string;
-	url: string; // download URL
-	path: string; // ruta en Storage, necesaria para borrarlo
+	url: string; // ruta de descarga vía /api/adjuntos/<key>
+	path: string; // key del objeto en R2, necesaria para borrarlo
 	contentType?: string;
 	size?: number;
 	subidoEn: string; // ISO timestamp
@@ -137,7 +137,7 @@ export interface Pedido {
 	estado: EstadoPedido;
 	historial?: HistorialEntry[]; // trazabilidad de cambios de estado (RF-21)
 	notas?: string;
-	adjuntos?: Adjunto[]; // documentos/imágenes adjuntos (Storage)
+	adjuntos?: Adjunto[]; // documentos/imágenes adjuntos (Cloudflare R2)
 	createdAt?: unknown;
 	updatedAt?: unknown;
 }

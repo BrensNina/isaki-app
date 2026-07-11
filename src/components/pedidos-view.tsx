@@ -149,6 +149,7 @@ export default function PedidosView() {
 						setVerPedido(null);
 						await recargar();
 					}}
+					onRefresh={recargar}
 				/>
 			)}
 		</div>
@@ -348,7 +349,7 @@ function PedidoForm({
 
 				<div className="flex items-center justify-between rounded-xl bg-primary-soft px-4 py-3">
 					<span className="text-sm text-muted">Total del pedido</span>
-					<span className="text-lg font-semibold text-primary">{money(montoTotal)}</span>
+					<span className="text-lg font-semibold text-foreground">{money(montoTotal)}</span>
 				</div>
 
 				{errors._ && <p className="text-sm text-red-600">{errors._}</p>}
@@ -364,7 +365,7 @@ function PedidoForm({
 
 // --------------------------- Detalle del pedido ---------------------------
 
-function PedidoDetalle({ pedido, rol, onClose, onChanged, onEdit }: { pedido: Pedido; rol: string; onClose: () => void; onChanged: () => void; onEdit?: () => void; }) {
+function PedidoDetalle({ pedido, rol, onClose, onChanged, onEdit, onRefresh }: { pedido: Pedido; rol: string; onClose: () => void; onChanged: () => void; onEdit?: () => void; onRefresh?: () => void; }) {
 	const [busy, setBusy] = useState(false);
 	const [adjuntos, setAdjuntos] = useState<Adjunto[]>(pedido.adjuntos ?? []);
 	const [subiendo, setSubiendo] = useState(false);
@@ -393,6 +394,7 @@ function PedidoDetalle({ pedido, rol, onClose, onChanged, onEdit }: { pedido: Pe
 		try {
 			const a = await subirAdjunto(pedido.id, file);
 			setAdjuntos((prev) => [...prev, a]);
+			onRefresh?.(); // refresca la lista del padre para que al reabrir el adjunto aparezca
 		} catch {
 			alert("No se pudo subir el archivo. Inténtalo de nuevo.");
 		} finally {
@@ -404,6 +406,7 @@ function PedidoDetalle({ pedido, rol, onClose, onChanged, onEdit }: { pedido: Pe
 		if (!confirm(`¿Quitar "${a.nombre}"?`)) return;
 		await eliminarAdjunto(pedido.id, a);
 		setAdjuntos((prev) => prev.filter((x) => x.path !== a.path));
+		onRefresh?.();
 	}
 
 	const SIGUIENTE: Partial<Record<EstadoPedido, EstadoPedido>> = {
@@ -477,7 +480,7 @@ function PedidoDetalle({ pedido, rol, onClose, onChanged, onEdit }: { pedido: Pe
 					</div>
 				)}
 
-				{/* Archivos adjuntos (Firebase Storage) */}
+				{/* Archivos adjuntos (Cloudflare R2) */}
 				<div>
 					<div className="mb-2 flex items-center justify-between gap-2">
 						<p className="flex items-center gap-2 text-sm font-medium">

@@ -82,11 +82,9 @@ export async function obtenerPedido(id: string): Promise<Pedido | null> {
 }
 
 /**
- * Registra un nuevo pedido. El estado inicial depende del anticipo:
- *  - Con anticipo (> 0): queda "pendiente_anticipo" hasta confirmar su recepción,
- *    requisito para pasar a producción (RF-10, RF-11, RF-13).
- *  - Sin anticipo (= 0): no hay nada que confirmar, así que pasa directo a
- *    "en_produccion". Evita pedir una "confirmación de anticipo" de S/ 0.00.
+ * Registra un nuevo pedido. Siempre arranca en "registrado"; desde ahí el
+ * vendedor/admin decide el flujo (solicitar cotización o aprobar directo a
+ * producción, que confirma el anticipo). El cliente recibe aviso por Telegram.
  */
 export async function crearPedido(data: PedidoInput, vendedorUid: string): Promise<string> {
 	const { items, montoTotal } = calcularTotales(data.items);

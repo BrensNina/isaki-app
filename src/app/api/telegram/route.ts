@@ -26,7 +26,9 @@ export async function POST(req: Request): Promise<Response> {
 	const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
 		method: "POST",
 		headers: { "content-type": "application/json" },
-		body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
+		// Sin parse_mode: los mensajes son texto plano y pueden incluir notas del
+		// usuario con < o & que romperían el parseo HTML (Telegram devolvería 400).
+		body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
 	});
 	return Response.json({ ok: r.ok });
 }
