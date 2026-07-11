@@ -201,6 +201,8 @@ function PedidoForm({
 	const [notas, setNotas] = useState(inicial?.notas || "");
 	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [busy, setBusy] = useState(false);
+	// Archivos elegidos antes de que exista el pedido; se suben tras crearlo.
+	const [pendientes, setPendientes] = useState<File[]>([]);
 
 	const { montoTotal } = useMemo(() => calcularTotales(items), [items]);
 	const hoy = new Date().toISOString().slice(0, 10);
@@ -248,7 +250,11 @@ function PedidoForm({
 			if (inicial) {
 				await actualizarPedido(inicial.id, data);
 			} else {
-				await crearPedido(data, vendedorUid);
+				const nuevoId = await crearPedido(data, vendedorUid);
+				// Sube los adjuntos elegidos en el formulario (ya hay id de pedido).
+				for (const f of pendientes) {
+					try { await subirAdjunto(nuevoId, f); } catch { /* best-effort */ }
+				}
 			}
 			onSaved();
 		} catch (err) {
@@ -346,6 +352,49 @@ function PedidoForm({
 				<Field label="Notas / especificaciones adicionales">
 					<Textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} />
 				</Field>
+
+				{!inicial && (
+					<div>
+						<div className="mb-2 flex items-center justify-between gap-2">
+							<p className="flex items-center gap-2 text-sm font-medium">
+								<Paperclip className="h-4 w-4 text-muted" /> Archivos adjuntos
+							</p>
+							<label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium transition hover:bg-background">
+								Adjuntar
+								<input
+									type="file"
+									className="hidden"
+									onChange={(e) => {
+										const f = e.target.files?.[0];
+										e.target.value = "";
+										if (!f) return;
+										if (f.size > 15 * 1024 * 1024) { alert("El archivo supera el límite de 15 MB."); return; }
+										setPendientes((prev) => [...prev, f]);
+									}}
+								/>
+							</label>
+						</div>
+						{pendientes.length === 0 ? (
+							<p className="text-sm text-muted">Se subirán al registrar el pedido.</p>
+						) : (
+							<ul className="flex flex-col gap-2">
+								{pendientes.map((f, i) => (
+									<li key={i} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2 text-sm">
+										<span className="truncate font-medium">{f.name}</span>
+										<button
+											type="button"
+											onClick={() => setPendientes((prev) => prev.filter((_, idx) => idx !== i))}
+											className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+											aria-label="Quitar archivo"
+										>
+											<X className="h-4 w-4" />
+										</button>
+									</li>
+								))}
+							</ul>
+						)}
+					</div>
+				)}
 
 				<div className="flex items-center justify-between rounded-xl bg-primary-soft px-4 py-3">
 					<span className="text-sm text-muted">Total del pedido</span>

@@ -33,12 +33,17 @@ const MENSAJE_CLIENTE: Partial<Record<EstadoPedido, string>> = {
 	cancelado: "❌ Tu pedido fue cancelado. Escríbenos si tienes dudas.",
 };
 
+/** Referencia corta y legible de un pedido, para que el cliente distinga mensajes. */
+export function refPedido(pedidoId: string): string {
+	return `#${pedidoId.slice(0, 6).toUpperCase()}`;
+}
+
 /** Notifica al cliente del pedido (best-effort). Lee el clienteId del doc. */
 async function avisarCliente(pedidoId: string, mensaje: string): Promise<void> {
 	try {
 		const snap = await getDoc(doc(getDb(), COL, pedidoId));
 		const clienteId = (snap.data() as Pedido | undefined)?.clienteId;
-		if (clienteId) void notifyCliente(clienteId, mensaje);
+		if (clienteId) void notifyCliente(clienteId, `📋 Pedido ${refPedido(pedidoId)}\n${mensaje}`);
 	} catch {
 		// best-effort: no bloquea la operación principal.
 	}
@@ -111,7 +116,7 @@ export async function crearPedido(data: PedidoInput, vendedorUid: string): Promi
 	};
 
 	const ref = await addDoc(collection(getDb(), COL), nuevo);
-	void notifyCliente(data.clienteId, "🆕 Tu pedido fue registrado. Te avisaremos por aquí de cada avance.");
+	void notifyCliente(data.clienteId, `📋 Pedido ${refPedido(ref.id)}\n🆕 Tu pedido fue registrado. Te avisaremos por aquí de cada avance.`);
 	return ref.id;
 }
 

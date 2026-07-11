@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, FileText, Plus, Trash2, X } from "lucide-react";
+import { ChevronRight, Download, FileText, Plus, Trash2, X } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { listarClientes } from "@/lib/clientes";
 import { calcularTotales } from "@/lib/pedidos";
@@ -13,6 +13,7 @@ import {
 	eliminarCotizacion,
 	listarCotizaciones,
 } from "@/lib/cotizaciones";
+import { descargarCotizacionPDF } from "@/lib/cotizacion-pdf";
 import { COLORES, TALLAS } from "@/lib/catalog";
 import { ESTADOS_COTIZACION } from "@/lib/types";
 import type { Cliente, Cotizacion, ItemPedido } from "@/lib/types";
@@ -362,6 +363,9 @@ function CotizacionDetalle({
 						</p>
 					</div>
 					<div className="flex items-center gap-2">
+						<Button variant="secondary" className="h-8 px-3 text-xs" onClick={() => descargarCotizacionPDF(cot)}>
+							<Download className="h-3.5 w-3.5" /> PDF
+						</Button>
 						{onEdit && puedeGestionar && cot.estado === "borrador" && (
 							<Button variant="secondary" className="h-8 px-3 text-xs" onClick={onEdit}>
 								Editar

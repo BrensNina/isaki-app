@@ -39,7 +39,8 @@ ajusta un administrador. Un no-admin no puede cambiarse el rol a sí mismo
 - Cabecera + líneas embebidas (producto, talla, color, cantidad, precio unitario).
   Totales, anticipo y saldo se recalculan al guardar.
 - **Adjuntos** (Cloudflare R2): subir/descargar/eliminar documentos e imágenes por
-  pedido (tope 15 MB). Metadatos guardados en el propio documento del pedido.
+  pedido (tope 15 MB). Se pueden adjuntar **al crear** el pedido (se suben tras
+  registrarlo) o después desde el detalle. Metadatos en el propio documento.
 - **Seguimiento / trazabilidad**: cada cambio de estado deja una entrada en el
   historial con fecha y nota (línea de tiempo en el detalle).
 - Filtros por estado con conteo.
@@ -72,6 +73,9 @@ registrado ──► esperando_cotizacion ──► cotizado ──► pendiente
 - Propuesta de precio previa al pedido (borrador → enviada → aprobada/rechazada).
 - Al **aprobar**, se **convierte en un pedido real** (reutiliza la creación de
   pedidos) y quedan enlazados por `pedidoGeneradoId`.
+- **Generar PDF**: desde el detalle se produce un documento imprimible de la
+  cotización (vía impresión del navegador → "Guardar como PDF") para enviárselo
+  al cliente. Sin dependencias de PDF.
 - Gestión comercial: admin (todas) y vendedor (solo las suyas).
 
 ### 4. Notificaciones a clientes (Telegram, opt-in)
@@ -80,6 +84,8 @@ registrado ──► esperando_cotizacion ──► cotizado ──► pendiente
 - El sistema le avisa automáticamente en los hitos relevantes: pedido registrado,
   en producción, control de calidad, listo para entrega, entregado, cancelado, y
   reportes de avance. Los pasos internos (cotización, cola) no molestan al cliente.
+- Cada mensaje incluye la **referencia del pedido** (`#XXXXXX`) para que el cliente
+  distinga entre pedidos distintos.
 - Todo es **best-effort**: si el cliente no vinculó o el bot no está configurado,
   la operación principal no se ve afectada.
 
