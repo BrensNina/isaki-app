@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, History, Package, Plus, Trash2, X } from "lucide-react";
+import { ChevronRight, History, Package, Paperclip, Plus, Trash2, X } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { listarClientes } from "@/lib/clientes";
+import { eliminarAdjunto, subirAdjunto } from "@/lib/adjuntos";
 import {
 	calcularTotales,
 	cambiarEstado,
@@ -16,7 +17,7 @@ import {
 } from "@/lib/pedidos";
 import { COLORES, TALLAS } from "@/lib/catalog";
 import { ESTADOS, getEstadoMeta } from "@/lib/types";
-import type { Cliente, EstadoPedido, HistorialEntry, ItemPedido, Pedido } from "@/lib/types";
+import type { Adjunto, Cliente, EstadoPedido, HistorialEntry, ItemPedido, Pedido } from "@/lib/types";
 import { Badge, Button, EmptyState, Field, Input, Modal, Select, Spinner, Textarea, money } from "./ui";
 
 export default function PedidosView() {
@@ -365,6 +366,9 @@ function PedidoForm({
 
 function PedidoDetalle({ pedido, rol, onClose, onChanged, onEdit }: { pedido: Pedido; rol: string; onClose: () => void; onChanged: () => void; onEdit?: () => void; }) {
 	const [busy, setBusy] = useState(false);
+	const [adjuntos, setAdjuntos] = useState<Adjunto[]>(pedido.adjuntos ?? []);
+	const [subiendo, setSubiendo] = useState(false);
+	const puedeAdjuntar = rol === "admin" || rol === "vendedor";
 
 	async function accion(fn: () => Promise<void>) {
 		setBusy(true);
@@ -374,6 +378,31 @@ function PedidoDetalle({ pedido, rol, onClose, onChanged, onEdit }: { pedido: Pe
 		} catch {
 			setBusy(false);
 		}
+	}
+
+	async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+		const file = e.target.files?.[0];
+		e.target.value = ""; // permite re-subir el mismo archivo
+		if (!file) return;
+		if (file.size > 15 * 1024 * 1024) {
+			alert("El archivo supera el límite de 15 MB.");
+			return;
+		}
+		setSubiendo(true);
+		try {
+			const a = await subirAdjunto(pedido.id, file);
+			setAdjuntos((prev) => [...prev, a]);
+		} catch {
+			alert("No se pudo subir el archivo. Inténtalo de nuevo.");
+		} finally {
+			setSubiendo(false);
+		}
+	}
+
+	async function handleQuitarAdjunto(a: Adjunto) {
+		if (!confirm(`¿Quitar "${a.nombre}"?`)) return;
+		await eliminarAdjunto(pedido.id, a);
+		setAdjuntos((prev) => prev.filter((x) => x.path !== a.path));
 	}
 
 	const SIGUIENTE: Partial<Record<EstadoPedido, EstadoPedido>> = {
@@ -446,6 +475,43 @@ function PedidoDetalle({ pedido, rol, onClose, onChanged, onEdit }: { pedido: Pe
 						{pedido.notas}
 					</div>
 				)}
+
+				{/* Archivos adjuntos (Firebase Storage) */}
+				<div>
+					<div className="mb-2 flex items-center justify-between gap-2">
+						<p className="flex items-center gap-2 text-sm font-medium">
+							<Paperclip className="h-4 w-4 text-muted" /> Archivos adjuntos
+						</p>
+						{puedeAdjuntar && (
+							<label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium transition hover:bg-background">
+								{subiendo ? "Subiendo…" : "Adjuntar"}
+								<input type="file" className="hidden" onChange={handleUpload} disabled={subiendo} />
+							</label>
+						)}
+					</div>
+					{adjuntos.length === 0 ? (
+						<p className="text-sm text-muted">Sin archivos adjuntos.</p>
+					) : (
+						<ul className="flex flex-col gap-2">
+							{adjuntos.map((a) => (
+								<li key={a.path} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2 text-sm">
+									<a href={a.url} target="_blank" rel="noopener noreferrer" className="truncate font-medium text-primary hover:underline">
+										{a.nombre}
+									</a>
+									{puedeAdjuntar && (
+										<button
+											onClick={() => handleQuitarAdjunto(a)}
+											className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+											aria-label="Quitar adjunto"
+										>
+											<X className="h-4 w-4" />
+										</button>
+									)}
+								</li>
+							))}
+						</ul>
+					)}
+				</div>
 
 				{pedido.historial && pedido.historial.length > 0 && <Timeline historial={pedido.historial} />}
 

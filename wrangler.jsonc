@@ -32,6 +32,13 @@
 			"service": "isaki-app"
 		}
 	],
+	"r2_buckets": [
+		{
+			// Adjuntos de pedidos (documentos/imágenes). Acceso vía /api/adjuntos.
+			"binding": "ADJUNTOS_BUCKET",
+			"bucket_name": "isaki-adjuntos"
+		}
+	],
 	"observability": {
 		"enabled": true
 	},

@@ -98,6 +98,14 @@ service cloud.firestore {
       allow delete: if rol() == 'admin' || (rol() == 'vendedor' && resource.data.vendedorUid == request.auth.uid);
     }
 
+    // ---------------- cotizaciones/{cotId} ----------------
+    // Gestión comercial: admin (todas) y vendedor (solo las suyas).
+    match /cotizaciones/{cotId} {
+      allow read: if rol() == 'admin' || (rol() == 'vendedor' && resource.data.vendedorUid == request.auth.uid);
+      allow create: if rol() == 'admin' || (rol() == 'vendedor' && request.resource.data.vendedorUid == request.auth.uid);
+      allow update, delete: if rol() == 'admin' || (rol() == 'vendedor' && resource.data.vendedorUid == request.auth.uid);
+    }
+
 
     // Default deny everything else.
     match /{document=**} {

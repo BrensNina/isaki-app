@@ -17,6 +17,8 @@ import {
 	where,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+import { notifyTelegram, soles } from "./notify";
+import { getEstadoMeta } from "./types";
 import type { EstadoPedido, HistorialEntry, ItemPedido, Pedido, PedidoInput } from "./types";
 
 const COL = "pedidos";
@@ -90,6 +92,8 @@ export async function crearPedido(data: PedidoInput, vendedorUid: string): Promi
 	};
 
 	const ref = await addDoc(collection(getDb(), COL), nuevo);
+	const unidades = items.reduce((a, it) => a + it.cantidad, 0);
+	void notifyTelegram(`🆕 Nuevo pedido de <b>${data.clienteNombre}</b> — ${soles(montoTotal)} (${unidades} und)`);
 	return ref.id;
 }
 
@@ -119,6 +123,7 @@ export async function aprobarPedidoAProduccion(id: string): Promise<void> {
 		historial: arrayUnion(entrada("pendiente_produccion", "Pedido aprobado y anticipo confirmado por el vendedor. Pasa a producción.")),
 		updatedAt: serverTimestamp(),
 	});
+	void notifyTelegram("✅ Pedido aprobado y anticipo confirmado. Pasa a la cola de producción.");
 }
 
 /** Agrega un reporte de avance sin cambiar de estado (se asume que está en producción) */
@@ -127,6 +132,7 @@ export async function reportarProgreso(id: string, nota: string): Promise<void> 
 		historial: arrayUnion(entrada("en_produccion", nota)),
 		updatedAt: serverTimestamp(),
 	});
+	void notifyTelegram(`🛠️ Avance de producción: ${nota}`);
 }
 
 /** Cambia el estado del pedido y deja registro en el historial (trazabilidad — RF-21). */
@@ -136,6 +142,7 @@ export async function cambiarEstado(id: string, estado: EstadoPedido, nota?: str
 		historial: arrayUnion(entrada(estado, nota)),
 		updatedAt: serverTimestamp(),
 	});
+	void notifyTelegram(`🔔 ${getEstadoMeta(estado).label}${nota ? ` — ${nota}` : ""}`);
 }
 
 /** Crea una entrada de historial fechada en el momento del cambio. */

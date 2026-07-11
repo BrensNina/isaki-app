@@ -112,6 +112,16 @@ export interface ItemPedido {
 	subtotal: number; // cantidad * precioUnitario (se recalcula al guardar)
 }
 
+/** Documento adjunto a un pedido (guardado en Firebase Storage). */
+export interface Adjunto {
+	nombre: string;
+	url: string; // download URL
+	path: string; // ruta en Storage, necesaria para borrarlo
+	contentType?: string;
+	size?: number;
+	subidoEn: string; // ISO timestamp
+}
+
 /** Cabecera del pedido (entidad PEDIDO) con sus líneas embebidas. */
 export interface Pedido {
 	id: string;
@@ -127,6 +137,7 @@ export interface Pedido {
 	estado: EstadoPedido;
 	historial?: HistorialEntry[]; // trazabilidad de cambios de estado (RF-21)
 	notas?: string;
+	adjuntos?: Adjunto[]; // documentos/imágenes adjuntos (Storage)
 	createdAt?: unknown;
 	updatedAt?: unknown;
 }
