@@ -375,7 +375,8 @@ function PedidoDetalle({ pedido, rol, onClose, onChanged, onEdit }: { pedido: Pe
 		try {
 			await fn();
 			onChanged();
-		} catch {
+		} catch (e) {
+			alert("No se pudo completar la acción: " + (e instanceof Error ? e.message : String(e)));
 			setBusy(false);
 		}
 	}
@@ -530,7 +531,7 @@ function PedidoDetalle({ pedido, rol, onClose, onChanged, onEdit }: { pedido: Pe
 					)}
 
 					<div className="flex flex-wrap gap-2">
-						{rol === "vendedor" && pedido.estado === "registrado" && (
+						{(rol === "admin" || rol === "vendedor") && pedido.estado === "registrado" && (
 							<>
 								<Button disabled={busy} variant="secondary" onClick={() => accion(() => cambiarEstado(pedido.id, "esperando_cotizacion", "Se solicitó cotización a administración."))}>
 									Solicitar Cotización a Admin
@@ -540,7 +541,7 @@ function PedidoDetalle({ pedido, rol, onClose, onChanged, onEdit }: { pedido: Pe
 								</Button>
 							</>
 						)}
-						{rol === "vendedor" && pedido.estado === "cotizado" && (
+						{(rol === "admin" || rol === "vendedor") && pedido.estado === "cotizado" && (
 							<Button disabled={busy} onClick={() => accion(() => aprobarPedidoAProduccion(pedido.id))}>
 								Aprobar y Confirmar Anticipo
 							</Button>
@@ -557,7 +558,7 @@ function PedidoDetalle({ pedido, rol, onClose, onChanged, onEdit }: { pedido: Pe
 							</Button>
 						)}
 
-						{rol === "produccion" && (
+						{(rol === "produccion" || rol === "admin") && (
 							<>
 								{siguiente && (
 									<Button disabled={busy} onClick={() => accion(() => cambiarEstado(pedido.id, siguiente))}>
