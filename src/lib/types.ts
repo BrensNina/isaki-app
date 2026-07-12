@@ -177,7 +177,6 @@ export interface Cotizacion {
 	montoTotal: number;
 
 	fechaEmision: string; // ISO yyyy-mm-dd
-	fechaValidez: string; // ISO yyyy-mm-dd (Límite para que el cliente acepte)
 
 	estado: EstadoCotizacion;
 	notasCondiciones?: string; // Términos: "50% de adelanto, entrega local..."
@@ -192,6 +191,5 @@ export type CotizacionInput = {
 	clienteId: string;
 	clienteNombre: string;
 	items: ItemPedido[];
-	fechaValidez: string;
 	notasCondiciones?: string;
 };

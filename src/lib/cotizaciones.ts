@@ -43,7 +43,6 @@ export async function crearCotizacion(data: CotizacionInput, vendedorUid: string
 		items,
 		montoTotal,
 		fechaEmision: new Date().toISOString().slice(0, 10),
-		fechaValidez: data.fechaValidez,
 		estado: "borrador" as EstadoCotizacion,
 		notasCondiciones: data.notasCondiciones ?? "",
 		createdAt: serverTimestamp(),
@@ -60,7 +59,6 @@ export async function actualizarCotizacion(id: string, data: CotizacionInput): P
 		clienteNombre: data.clienteNombre,
 		items,
 		montoTotal,
-		fechaValidez: data.fechaValidez,
 		notasCondiciones: data.notasCondiciones ?? "",
 		updatedAt: serverTimestamp(),
 	});

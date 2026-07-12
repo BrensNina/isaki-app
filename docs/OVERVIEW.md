@@ -73,9 +73,9 @@ registrado ──► esperando_cotizacion ──► cotizado ──► pendiente
 - Propuesta de precio previa al pedido (borrador → enviada → aprobada/rechazada).
 - Al **aprobar**, se **convierte en un pedido real** (reutiliza la creación de
   pedidos) y quedan enlazados por `pedidoGeneradoId`.
-- **Generar PDF**: desde el detalle se produce un documento imprimible de la
-  cotización (vía impresión del navegador → "Guardar como PDF") para enviárselo
-  al cliente. Sin dependencias de PDF.
+- **Generar PDF**: desde el detalle se descarga un PDF real de la cotización
+  (generado con jsPDF en el navegador) para enviárselo al cliente.
+- Cada cotización lleva fecha de emisión y condiciones/notas comerciales.
 - Gestión comercial: admin (todas) y vendedor (solo las suyas).
 
 ### 4. Notificaciones a clientes (Telegram, opt-in)

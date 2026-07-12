@@ -24,7 +24,6 @@ export function descargarCotizacionPDF(cot: Cotizacion): void {
 	doc.text(ref, anchoPag - M, 18, { align: "right" });
 	doc.setTextColor(107, 114, 128);
 	doc.text(`Emitida: ${cot.fechaEmision || "—"}`, anchoPag - M, 24, { align: "right" });
-	doc.text(`Válida hasta: ${cot.fechaValidez || "—"}`, anchoPag - M, 29, { align: "right" });
 
 	doc.setDrawColor(17, 24, 39).setLineWidth(0.5).line(M, 33, anchoPag - M, 33);
 

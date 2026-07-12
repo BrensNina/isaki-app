@@ -74,7 +74,6 @@ export default function CotizacionesView() {
 								<th className="px-4 py-3">Cliente</th>
 								<th className="px-4 py-3">Ítems</th>
 								<th className="px-4 py-3">Total</th>
-								<th className="px-4 py-3">Validez</th>
 								<th className="px-4 py-3">Estado</th>
 								<th className="px-4 py-3" />
 							</tr>
@@ -91,7 +90,6 @@ export default function CotizacionesView() {
 										{q.items.reduce((a, it) => a + it.cantidad, 0)} und · {q.items.length} línea(s)
 									</td>
 									<td className="px-4 py-3 tabular-nums">{money(q.montoTotal)}</td>
-									<td className="px-4 py-3 text-muted">{q.fechaValidez || "—"}</td>
 									<td className="px-4 py-3">
 										<Badge className={ESTADOS_COTIZACION[q.estado].badge}>{ESTADOS_COTIZACION[q.estado].label}</Badge>
 									</td>
@@ -167,13 +165,11 @@ function CotizacionForm({
 }) {
 	const [clienteId, setClienteId] = useState(inicial?.clienteId || "");
 	const [items, setItems] = useState<ItemPedido[]>(inicial ? inicial.items : [{ ...ITEM_VACIO }]);
-	const [fechaValidez, setFechaValidez] = useState(inicial?.fechaValidez || "");
 	const [notas, setNotas] = useState(inicial?.notasCondiciones || "");
 	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [busy, setBusy] = useState(false);
 
 	const { montoTotal } = useMemo(() => calcularTotales(items), [items]);
-	const hoy = new Date().toISOString().slice(0, 10);
 
 	function setItem(i: number, patch: Partial<ItemPedido>) {
 		setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -193,8 +189,6 @@ function CotizacionForm({
 			if (!Number.isFinite(it.cantidad) || it.cantidad <= 0) e[`cant_${i}`] = "Cantidad inválida.";
 			if (!Number.isFinite(it.precioUnitario) || it.precioUnitario < 0) e[`prec_${i}`] = "Precio inválido.";
 		});
-		if (!fechaValidez) e.validez = "Indica hasta cuándo es válida.";
-		else if (fechaValidez < hoy) e.validez = "La validez no puede ser anterior a hoy.";
 		setErrors(e);
 		return Object.keys(e).length === 0;
 	}
@@ -208,7 +202,6 @@ function CotizacionForm({
 				clienteId,
 				clienteNombre: clientes.find((c) => c.id === clienteId)?.razonSocial || "Cliente Desconocido",
 				items,
-				fechaValidez,
 				notasCondiciones: notas.trim(),
 			};
 			if (inicial) await actualizarCotizacion(inicial.id, data);
@@ -297,12 +290,6 @@ function CotizacionForm({
 					))}
 				</div>
 
-				<div className="grid gap-4 sm:grid-cols-2">
-					<Field label="Válida hasta" error={errors.validez}>
-						<Input type="date" min={hoy} value={fechaValidez} onChange={(e) => setFechaValidez(e.target.value)} />
-					</Field>
-				</div>
-
 				<Field label="Condiciones / notas">
 					<Textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Ej. 50% de adelanto, entrega en 15 días…" />
 				</Field>
@@ -359,7 +346,7 @@ function CotizacionDetalle({
 					<div>
 						<p className="text-lg font-semibold">{cot.clienteNombre}</p>
 						<p className="text-sm text-muted">
-							Emitida: {cot.fechaEmision || "—"} · Válida hasta: {cot.fechaValidez || "—"}
+							Emitida: {cot.fechaEmision || "—"}
 						</p>
 					</div>
 					<div className="flex items-center gap-2">
